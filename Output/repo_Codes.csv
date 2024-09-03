@@ -1,0 +1,605 @@
+path,content
+Financial_chatbot/Code/0. text_pre_process.py,"def split_into_sentences(text, words_per_sentence=10):
+    words = text.split()
+    sentences = []
+
+    for i in range(0, len(words), words_per_sentence):
+        sentence = ' '.join(words[i:i + words_per_sentence])
+        sentences.append(sentence)
+        
+    return '\n\n'.join(sentences)
+
+with open('path_to_your_input_file', 'r') as file:
+    content = file.read()
+
+modified_content = split_into_sentences(content)
+
+with open('path_to_your_output_file', 'w') as file:
+    file.write(modified_content)
+
+print(""Text has been split into sentences with 10 words each, and blank lines have been added."")
+"
+Financial_chatbot/Code/1. pdf_to_csv.py,"import PyPDF2
+import csv
+
+def extract_text_from_pdf(pdf_file_path):
+    pdf_reader = PyPDF2.PdfReader(pdf_file_path)
+    pages_content = []
+
+    for page_num in range(len(pdf_reader.pages)):
+        page = pdf_reader.pages[page_num]
+        text = page.extract_text()
+        pages_content.append(text)
+    
+    return pages_content
+
+def save_pages_to_csv(pages_content, output_csv_file):
+    with open(output_csv_file, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow([""Page"", ""Content""]) 
+        for i, content in enumerate(pages_content):
+            writer.writerow([i + 1, content])
+
+if __name__ == ""__main__"":
+    input_pdf_file = '.pdf'  # Replace with your PDF file path
+    output_csv_file = '.csv'  # Replace with your desired output CSV file path
+    
+    pages_content = extract_text_from_pdf(input_pdf_file)
+    save_pages_to_csv(pages_content, output_csv_file)
+
+    print(f""Content of each page has been extracted and saved to {output_csv_file}"")
+"
+Financial_chatbot/Code/2.1 csv_summarizer.py,"import pandas as pd
+import openai
+import logging
+import time
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def summarize_text(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert financial analyst. You have been given a 10-Q quarterly report of a public company. Your tasks are: Summarization: Read the context provided from the 10-Q report and create a concise, coherent summary that captures the key points about the company's financial performance, risks, opportunities, and future outlook. The summary should be written in a way that is easy to understand by stakeholders who may not have a financial background. Question Generation: After creating the summary, generate 3-5 insightful questions based on the content of the report. These questions should help stakeholders further explore key issues, risks, or trends that were mentioned in the summary.Answer Generation: Provide brief, informative answers to the questions you generated. These answers should be based on the content of the report, using the context you have summarized."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f""Error in summarizing text: {e}"")
+        return ""Error: Could not summarize""
+
+def summarize_csv_content(input_csv_file, output_csv_file):
+    try:
+        df = pd.read_csv(input_csv_file)
+        if 'Content' not in df.columns:
+            raise ValueError(""'Content' column not found in the input CSV file."")
+
+        logging.info(""Starting summarization..."")
+        df['summary'] = df['Content'].apply(lambda x: summarize_text(x) if pd.notnull(x) else """")
+
+        df.to_csv(output_csv_file, index=False)
+        logging.info(f""Summaries have been generated and saved to {output_csv_file}"")
+    except Exception as e:
+        logging.error(f""Error processing CSV: {e}"")
+
+if __name__ == ""__main__"":
+    input_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/out.csv'  
+    output_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/summary_qna.csv' 
+
+    summarize_csv_content(input_csv_file, output_csv_file)
+"
+Financial_chatbot/Code/2.2 summary_qna.py,"import pandas as pd
+import openai
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def generate_qna(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert financial analyst. Your task is to generate 3-5 insightful questions and provide brief, informative answers based on the provided text. The questions and answers should help stakeholders further explore key issues, risks, or trends mentioned in the text. Provide the output in the following format: For each question, provide the corresponding answer."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        
+        raw_content = response.choices[0].message['content'].strip()
+        logging.info(f""Raw response content: {raw_content}"")
+        
+        qna_pairs = []
+        for line in raw_content.split('\n'):
+            if 'Answer: ' in line:
+                question_part = line.split('Answer: ')[0].strip()
+                answer_part = line.split('Answer: ')[1].strip()
+                if 'Question: ' in question_part:
+                    question = question_part.replace('Question: ', '').strip()
+                    qna_pairs.append((question, answer_part))
+        
+        questions, answers = zip(*qna_pairs) if qna_pairs else ([], [])
+        
+        return list(questions), list(answers)
+    except Exception as e:
+        logging.error(f""Error in generating Q&A: {e}"")
+        return [], []
+
+def generate_qna_csv(input_csv_file, output_csv_file):
+    try:
+        df = pd.read_csv(input_csv_file)
+        if 'Content' not in df.columns:
+            raise ValueError(""'Content' column not found in the input CSV file."")
+
+        questions_list = []
+        answers_list = []
+
+        logging.info(""Starting Q&A generation..."")
+        for index, row in df.iterrows():
+            if pd.notnull(row['Content']):
+                questions, answers = generate_qna(row['Content'])
+                for q, a in zip(questions, answers):
+                    questions_list.append(q)
+                    answers_list.append(a)
+
+        qna_df = pd.DataFrame({
+            'Question': questions_list,
+            'Answer': answers_list
+        })
+
+        qna_df.to_csv(output_csv_file, index=False)
+        logging.info(f""Q&A have been generated and saved to {output_csv_file}"")
+    except Exception as e:
+        logging.error(f""Error processing CSV: {e}"")
+
+if __name__ == ""__main__"":
+    input_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test_summary.csv'  
+    output_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna.csv' 
+
+    generate_qna_csv(input_csv_file, output_csv_file)
+"
+Financial_chatbot/Code/3.1 qna_generate.py,"import openai
+import csv
+import sys
+import os
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+def qgen(source_text):
+    client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                ""role"": ""system"",
+                ""content"": ""Respond with a list of 5 to 10 questions. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \""this team\"" or \""that lab\"". Each question must be on its own line. Just list the questions without any introductory text or numbers."",
+            },
+            {
+                ""role"": ""user"",
+                ""content"": source_text,
+            }
+        ],
+        model=MODEL_NAME,
+        stream=False,
+    )
+    return chat_completion.choices[0].message.content
+
+def agen(source_text, question):
+    client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                ""role"": ""system"",
+                ""content"": ""Give a comprehensive and well-reasoned answer to the user question strictly based on the context below.\n"" + source_text,
+            },
+            {
+                ""role"": ""user"",
+                ""content"": question,
+            }
+        ],
+        model=MODEL_NAME,
+        stream=False,
+    )
+    return chat_completion.choices[0].message.content
+
+def main():
+    # Input and output file paths
+    input_file_path = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test.csv'
+    output_file_path = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna_test.csv'
+    
+    results = []
+
+    with open(input_file_path, 'r', newline='') as csvfile:
+        csv_reader = csv.DictReader(csvfile)
+        for row in csv_reader:
+            page_content = row['Content']
+
+            qs = qgen(page_content)
+            for q in qs.splitlines():
+                if len(q.strip()) == 0:
+                    continue
+
+                answer = agen(page_content, q)
+                result = {
+                    'Question': q,
+                    'Answer': answer
+                }
+                results.append(result)
+
+    with open(output_file_path, 'w', newline='') as csvfile:
+        fieldnames = ['Question', 'Answer']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for row in results:
+            writer.writerow(row)
+
+if __name__ == ""__main__"":
+    main()
+"
+Financial_chatbot/Code/3.2 qna_format.py,"import csv
+
+def convert_csv_to_output(input_file, output_file):
+    with open(input_file, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)
+
+        with open(output_file, 'w') as outfile:
+            for row in reader:
+                column_1 = row[0]
+                column_2 = row[1]
+                outfile.write(f""<SFT><s>[INST] <<SYS>>\n You are a financial assistant. Provide detailed, clear, and professional financial insights, and ensure that your responses are easy to understand. \n<</SYS>>\n\n {column_1} [/INST] {column_2} \n"")
+
+# Testing the function
+input_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna_test.csv'  
+output_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/Text/test.txt' 
+convert_csv_to_output(input_file, output_file)
+"
+Financial_chatbot/Code/data_scrap.py,"from pathlib import Path
+from typing import List, Optional
+import itertools
+import pdfkit
+from fire import Fire
+from sec_edgar_downloader import Downloader
+
+DEFAULT_OUTPUT_DIR = ""data/""
+DEFAULT_CIKS = [
+    ""0001018724"",  # AMZN
+]
+DEFAULT_FILING_TYPES = [
+    ""10-K"",
+    ""10-Q"",
+]
+
+COMPANY_NAME = ""Your Company Name""
+EMAIL = ""your-email@example.com""
+
+def filing_exists(cik: str, filing_type: str, output_dir: str) -> bool:
+    data_dir = Path(output_dir) / ""sec-edgar-filings""
+    filing_dir = data_dir / cik / filing_type
+    return filing_dir.exists()
+
+def _download_filing(
+    cik: str, filing_type: str, output_dir: str, limit=None, before=None, after=None
+):
+    dl = Downloader(COMPANY_NAME, EMAIL, output_dir)
+    dl.get(filing_type, cik, limit=limit, before=before, after=after, download_details=True)
+
+def _convert_to_pdf(output_dir: str):
+    data_dir = Path(output_dir) / ""sec-edgar-filings""
+
+    for cik_dir in data_dir.iterdir():
+        for filing_type_dir in cik_dir.iterdir():
+            for filing_dir in filing_type_dir.iterdir():
+                filing_doc = filing_dir / ""primary-document.html""
+                filing_pdf = filing_dir / ""primary-document.pdf""
+                if filing_doc.exists() and not filing_pdf.exists():
+                    print(f""- Converting {filing_doc}"")
+                    input_path = str(filing_doc.absolute())
+                    output_path = str(filing_pdf.absolute())
+                    try:
+                        options = {'enable-local-file-access': None}
+                        pdfkit.from_file(input_path, output_path, options=options, verbose=True)
+                        filing_doc.unlink()
+                    except Exception as e:
+                        print(f""Error converting {input_path} to {output_path}: {e}"")
+
+def main(
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+    ciks: List[str] = DEFAULT_CIKS,
+    file_types: List[str] = DEFAULT_FILING_TYPES,
+    before: Optional[str] = None,
+    after: Optional[str] = None,
+    limit: Optional[int] = 3,
+    convert_to_pdf: bool = True,
+):
+    print(f'Downloading filings to ""{Path(output_dir).absolute()}""')
+    print(f""File Types: {file_types}"")
+    
+    if convert_to_pdf:
+        if pdfkit.configuration().wkhtmltopdf is None:
+            raise Exception(
+                ""ERROR: wkhtmltopdf (https://wkhtmltopdf.org/) not found, ""
+                ""please install it to convert html to pdf ""
+                ""`sudo apt-get install wkhtmltopdf`""
+            )
+    
+    for symbol, file_type in itertools.product(ciks, file_types):
+        try:
+            if filing_exists(symbol, file_type, output_dir):
+                print(f""- Filing for {symbol} {file_type} already exists, skipping"")
+            else:
+                print(f""- Downloading filing for {symbol} {file_type}"")
+                _download_filing(symbol, file_type, output_dir, limit, before, after)
+        except Exception as e:
+            print(f""Error downloading filing for symbol={symbol} & file_type={file_type}: {e}"")
+
+    if convert_to_pdf:
+        print(""Converting html files to pdf files and deleting the html files"")
+        _convert_to_pdf(output_dir)
+
+if __name__ == ""__main__"":
+    Fire(main)
+"
+Financial_chatbot/Code/summarizer_openai.py,"from openai import OpenAI
+
+client = OpenAI(api_key=""your_openai_api_key_here"")
+
+def read_text_file(file_path):
+    with open(file_path, 'r') as file:
+        return file.read()
+
+def generate_summary(text, model=""gpt-4o-mini"", max_tokens=150):
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[
+            {""role"": ""system"", ""content"": ""You are an expert in analysing 10-Q reports and summarizes the content of those reports.""},
+            {""role"": ""user"", ""content"": text},
+        ]
+    )
+    
+    summary = completion.choices[0].message['content'].strip()
+    return summary
+
+
+def main(file_path):
+    text = read_text_file(file_path)
+    summary = generate_summary(text)
+    print(""Summary:"")
+    print(summary)
+
+if __name__ == ""__main__"":
+    input_file_path = ""your_text_file.txt"" 
+    main(input_file_path)
+
+"
+Github_bot/Issue_summarizer.py,"import csv
+import logging
+import time
+from github import Github
+from urllib.parse import urlparse
+import openai
+
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def summarize_text(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert in summarizing and understanding various types of code and documentation. Summarize the given text in a concise and coherent manner."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f""Error in summarizing text: {e}"")
+        return ""Error: Could not summarize""
+
+def get_repo_issues(repo_url):
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip('/').split('/')
+    owner, repo_name = path_parts[0], path_parts[1]
+
+    # Initialize GitHub client
+    g = Github() 
+
+    # Get the repository
+    repo = g.get_repo(f""{owner}/{repo_name}"")
+
+    # Get all issues
+    issues = repo.get_issues(state=""all"")
+    issue_list = []
+    for issue in issues:
+        issue_list.append({
+            ""title"": issue.title,
+            ""body"": issue.body
+        })
+
+    return issue_list
+
+def process_issues(repo_url, output_csv_file):
+    try:
+        issues = get_repo_issues(repo_url)
+        
+        with open(output_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([""Issue Title"", ""Summary""])  
+            
+            for issue in issues:
+                title = issue[""title""]
+                body = issue[""body""]
+                logging.info(f""Processing issue: {title}"")
+                
+                # Summarize the issue body
+                summary = summarize_text(body)
+                writer.writerow([title, summary])
+                
+                logging.info(f""Summary for issue '{title}' added to CSV."")
+
+    except Exception as e:
+        logging.error(f""Error processing issues: {e}"")
+
+if __name__ == ""__main__"":
+    repo_url = input(""Enter the GitHub repository URL: "")
+    output_csv_file = ""repo_issues_summaries.csv""
+
+    process_issues(repo_url, output_csv_file)
+    print(f""Issue summaries have been saved to {output_csv_file}"")
+"
+Github_bot/repo_summarizer.py,"import os
+import csv
+import requests
+import logging
+import time
+from github import Github
+from urllib.parse import urlparse
+import openai
+
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def summarize_text(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert in summarizing and understanding various types of code and documentation. Summarize the given text in a concise and coherent manner."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f""Error in summarizing text: {e}"")
+        return ""Error: Could not summarize""
+
+def get_repo_files(repo_url):
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip('/').split('/')
+    owner, repo_name = path_parts[0], path_parts[1]
+
+    # Initialize GitHub client
+    g = Github() 
+
+    # Get the repository
+    repo = g.get_repo(f""{owner}/{repo_name}"")
+
+    # Get all files in the repository
+    files = []
+    contents = repo.get_contents("""")
+    while contents:
+        file_content = contents.pop(0)
+        if file_content.type == ""dir"":
+            contents.extend(repo.get_contents(file_content.path))
+        else:
+            files.append(file_content.path)
+
+    return files
+
+def fetch_file_content(repo_url, file_path):
+    # Extract owner and repo name from the URL
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip('/').split('/')
+    owner, repo_name = path_parts[0], path_parts[1]
+
+    # Initialize GitHub client
+    g = Github() 
+
+    # Get the repository
+    repo = g.get_repo(f""{owner}/{repo_name}"")
+
+    # Get file content
+    file_content = repo.get_contents(file_path).decoded_content.decode()
+    return file_content
+
+def process_files(repo_url, output_csv_file):
+    try:
+        file_paths = get_repo_files(repo_url)
+        
+        with open(output_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([""File Path"", ""Summary""])  
+            
+            for path in file_paths:
+                logging.info(f""Processing file: {path}"")
+                file_content = fetch_file_content(repo_url, path)
+                
+                summary = summarize_text(file_content)
+                writer.writerow([path, summary])
+                
+                logging.info(f""Summary for {path} added to CSV."")
+
+    except Exception as e:
+        logging.error(f""Error processing files: {e}"")
+
+if __name__ == ""__main__"":
+    repo_url = input(""Enter the GitHub repository URL: "")
+    output_csv_file = ""repo_file_summaries.csv""
+
+    process_files(repo_url, output_csv_file)
+    print(f""File summaries have been saved to {output_csv_file}"")
+"

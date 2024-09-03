@@ -16,16 +16,16 @@ def get_github_contents(repo_url):
     return response.json()
 
 def process_contents(contents, paths=[], parent_path=""):
+    code_extensions = {'.py', '.js', '.java', '.c', '.cpp', '.rb', '.go', '.php', '.html', '.css', '.ts', '.sh'}
+    
     for item in contents:
         path = parent_path + item['name']
         if item['type'] == 'dir':
             dir_contents = requests.get(item['url']).json()
             process_contents(dir_contents, paths, path + "/")
         else:
-            mime_type, _ = mimetypes.guess_type(item['name'])
-            if mime_type and mime_type.split('/')[0] in ['image', 'video']:
-                paths.append({"path": path, "content": ""})
-            else:
+            extension = '.' + item['name'].split('.')[-1] if '.' in item['name'] else ''
+            if extension in code_extensions:
                 file_response = requests.get(item['download_url'])
                 file_content = file_response.text
                 paths.append({"path": path, "content": file_content})
@@ -44,9 +44,5 @@ if __name__ == "__main__":
     repo_url = input("Enter GitHub repository URL: ")
     contents = get_github_contents(repo_url)
     paths = process_contents(contents)
-    write_to_csv(paths, "repo_contents.csv")
-    print("CSV file 'repo_contents.csv' generated successfully.")
-
-# OCR to be added for data extraction from images inside the repository
-# How to handle PDF or other file formats inside a repository like a PDF or a CSV or some other file
-# What files to be ignored
+    write_to_csv(paths, "repo_Codes.csv")
+    print("CSV file 'repo_codes.csv' generated successfully.")
