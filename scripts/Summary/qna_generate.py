@@ -1,80 +1,59 @@
+import pandas as pd
 import openai
-import csv
+import logging
+import time
+
+logging.basicConfig(level=logging.ERROR)
 
 API_BASE_URL = "https://llama.us.gaianet.network/v1"
 MODEL_NAME = "llama"
 API_KEY = "GAIA"
 
-def qgen(source_text):
-    client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "Respond with a list of 5 to 10 questions. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \"this team\" or \"that lab\". Each question must be on its own line. Just list the questions without any introductory text or numbers.",
-            },
-            {
-                "role": "user",
-                "content": source_text,
-            }
-        ],
-        model=MODEL_NAME,
-        stream=False,
-    )
-    return chat_completion.choices[0].message.content
+def generate_qna(text, summary):
+    try:
+        start_time = time.time()
+        combined_text = f"Content: {text}\n\nSummary: {summary}"
+        
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert in analyzing complex information. Based on the provided content and summary, generate 3-5 insightful questions and provide brief, informative answers. Format the output as: Question: [question text] Answer: [answer text]."
+                },
+                {
+                    "role": "user",
+                    "content": combined_text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        
+        raw_content = response.choices[0].message.content.strip()
 
-def agen(source_text, question):
-    client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        # Capture QnA pairs
+        return raw_content
+    except Exception as e:
+        logging.error(f"Error in generating Q&A: {e}")
+        return "Error: Could not generate Q&A"
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "Give a comprehensive and well-reasoned answer to the user question strictly based on the context below.\n" + source_text,
-            },
-            {
-                "role": "user",
-                "content": question,
-            }
-        ],
-        model=MODEL_NAME,
-        stream=False,
-    )
-    return chat_completion.choices[0].message.content
+def generate_qna_csv(input_csv_file, output_csv_file):
+    try:
+        df = pd.read_csv(input_csv_file)
+        
+        if 'Content' not in df.columns or 'Summary' not in df.columns:
+            raise ValueError("'Content' or 'Summary' column not found in the input CSV file.")
+        
+        df['QnA'] = df.apply(lambda row: generate_qna(row['Content'], row['Summary']) if pd.notnull(row['Content']) else "", axis=1)
 
-def main():
-    # Input and output file paths
-    input_file_path = 'Output//repo_Codes_summary_llama.csv'
-    output_file_path = 'Output//llama_qna_test.csv'
-    
-    results = []
-
-    with open(input_file_path, 'r', newline='') as csvfile:
-        csv_reader = csv.DictReader(csvfile)
-        for row in csv_reader:
-            page_content = row['content']
-
-            qs = qgen(page_content)
-            qna_pairs = []
-            for q in qs.splitlines():
-                if len(q.strip()) == 0:
-                    continue
-
-                answer = agen(page_content, q)
-                qna_pairs.append(f"Q: {q}\nA: {answer}")
-
-            row['qna'] = "\n\n".join(qna_pairs)
-            results.append(row)
-
-    # Write back to the CSV with the new QnA column
-    with open(output_file_path, 'w', newline='') as csvfile:
-        fieldnames = ['Path', 'Content', 'Summary', 'QnA']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-        writer.writeheader()
-        for row in results:
-            writer.writerow(row)
+        # Save the new DataFrame with the QnA column
+        df.to_csv(output_csv_file, index=False)
+    except Exception as e:
+        logging.error(f"Error processing CSV: {e}")
 
 if __name__ == "__main__":
-    main()
+    input_csv_file = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\repo_Codes_summary_gemma.csv"  
+    output_csv_file = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\repo_Codes_summary_gemma_qna.csv"  
+    generate_qna_csv(input_csv_file, output_csv_file)

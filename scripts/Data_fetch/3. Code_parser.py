@@ -16,7 +16,7 @@ def get_github_contents(repo_url):
     return response.json()
 
 def process_contents(contents, paths=[], parent_path=""):
-    code_extensions = {'.py', '.js', '.java', '.c', '.cpp', '.rb', '.go', '.php', '.html', '.css', '.ts', '.sh'}
+    code_extensions = {'.py', '.js', '.java', '.c', '.cpp', '.rb', '.go', '.php', '.html', '.css', '.ts', '.sh','.rs'}
     
     for item in contents:
         path = parent_path + item['name']
