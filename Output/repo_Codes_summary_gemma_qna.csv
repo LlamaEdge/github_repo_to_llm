@@ -1,4 +1,4 @@
-path,Content,Summary
+path,Content,Summary,QnA
 Financial_chatbot/Code/0. text_pre_process.py,"def split_into_sentences(text, words_per_sentence=10):
     words = text.split()
     sentences = []
@@ -46,7 +46,19 @@ print(""Text has been split into sentences with 10 words each, and blank lines h
 
 
 
-Let me know if you have any other questions!"
+Let me know if you have any other questions!","Here are 3-5 insightful questions with brief answers based on the provided content and summary:
+
+**Question: What is the primary function of the `split_into_sentences` method in this code?**
+Answer: The primary function of the `split_into_sentences` method is to split a given text into sentences, with each sentence containing a maximum of 10 words.
+
+**Question: How does the code handle file input and output?**
+Answer: The code reads the content from an input file specified by `path_to_your_input_file` and writes the modified text to an output file specified by `path_to_your_output_file`.
+
+**Question: What is the potential limitation of the sentence segmentation heuristic used in this code?**
+Answer: The simple heuristic based on word count may not always accurately identify sentence boundaries, as real sentences can have varying lengths and structures.
+
+**Question: Why might more sophisticated techniques be needed for better accuracy in sentence segmentation?**
+Answer: More sophisticated techniques like using punctuation marks or machine learning models are generally needed because they can take into account the nuances of language and produce more accurate results."
 Financial_chatbot/Code/1. pdf_to_csv.py,"import PyPDF2
 import csv
 
@@ -112,7 +124,16 @@ This code snippet is designed to extract text from a PDF file and save it into a
 
 
 
-Let me know if you have any more questions!"
+Let me know if you have any more questions!","Here are 3-5 insightful questions with brief, informative answers based on the provided content and summary:
+
+**Question: What is the purpose of using `PyPDF2` library in this code?**
+Answer: The `PyPDF2` library is used to extract text from PDF files. It creates a `PdfReader` object that allows us to access information about the PDF, including the ability to extract text from each page.
+
+**Question: How does the `extract_text_from_pdf()` function handle multiple pages in the PDF?**
+Answer: The `extract_text_from_pdf()` function iterates through each page of the PDF using a `for` loop and extracts the text content from each page using `page.extract_text()`. It stores the extracted text in a list, allowing for easy access to the text from all pages.
+
+**Question: What encoding is used when writing data to the CSV file?**
+Answer: The code uses UTF-8 encoding when opening the CSV file in write mode (`'w', newline='', encoding='utf-8')`. This ensures proper handling of special characters and automatic file closure."
 Financial_chatbot/Code/2.1 csv_summarizer.py,"import pandas as pd
 import openai
 import logging
@@ -204,7 +225,19 @@ Here's a step-by-step breakdown:
 
 
 
-This script essentially automates the process of summarizing financial reports extracted from a CSV file, leveraging OpenAI's Llama model for generating concise summaries and insightful questions based on the content. The use of pandas makes it easy to handle tabular data, while logging ensures that the execution process is transparent."
+This script essentially automates the process of summarizing financial reports extracted from a CSV file, leveraging OpenAI's Llama model for generating concise summaries and insightful questions based on the content. The use of pandas makes it easy to handle tabular data, while logging ensures that the execution process is transparent.","Here are 3-5 insightful questions and brief, informative answers based on the provided content:
+
+Question: What is the primary purpose of the OpenAI client initialization in the script?
+Answer: The OpenAI client is initialized to utilize the Llama model for natural language processing tasks such as text summarization.
+
+Question: How does the `summarize_text` function handle exceptions during the summarization process?
+Answer: If an exception occurs, it logs the error message and returns a generic error response indicating that the text could not be summarized.
+
+Question: What is the purpose of applying the `apply` method to the 'Content' column in the `summarize_csv_content` function?
+Answer: This is used to apply the `summarize_text` function to each non-null value in the 'Content' column, generating a summary for each text snippet.
+
+Question: Why does the script check if the 'Content' column exists in the input CSV file?
+Answer: It ensures that the required data (text snippets) is present in the input CSV file before attempting to summarize it."
 Financial_chatbot/Code/2.2 summary_qna.py,"import pandas as pd
 import openai
 import logging
@@ -321,7 +354,22 @@ Here's a breakdown:
 
 
 
-**Overall, this code automates the process of extracting insights from financial text by leveraging a powerful language model. It allows users to obtain concise questions and answers that highlight important aspects of their financial data.**"
+**Overall, this code automates the process of extracting insights from financial text by leveraging a powerful language model. It allows users to obtain concise questions and answers that highlight important aspects of their financial data.**","Here are 3-5 insightful questions and brief, informative answers based on the provided content:
+
+**Question:** What is the primary function of the `generate_qna` function in this code?
+**Answer:** The `generate_qna` function takes a text string as input, sends a request to the Llama model, processes the raw response from the API, and returns a list of questions and corresponding answers.
+
+**Question:** How does the code ensure that the generated Q&A pairs are relevant to financial analysis?
+**Answer:** The prompt used in the `generate_qna` function instructs the Llama model to act as an expert financial analyst and focus on key issues, risks, or trends mentioned in the text.
+
+**Question:** What is the purpose of the `generate_qna_csv` function?
+**Answer:** The `generate_qna_csv` function reads a CSV file containing financial text data, iterates through each row, extracts the content, generates Q&A pairs using the `generate_qna` function, and saves them as a new CSV file.
+
+**Question:** How does the code handle errors during the execution of the `generate_qna` or `generate_qna_csv` functions?
+**Answer:** The code uses try-except blocks to catch any exceptions that may occur during the execution of these functions and logs the error messages for further investigation.
+
+**Question:** What is the output format of the generated Q&A pairs in the CSV file?
+**Answer:** The output format consists of two columns: ""Question"" and ""Answer"", where each row represents a single question-answer pair."
 Financial_chatbot/Code/3.1 qna_generate.py,"import openai
 import csv
 import sys
@@ -445,7 +493,22 @@ Here's a breakdown:
 
 
 
-**Overall:** This code effectively demonstrates how to leverage OpenAI's API to build a rudimentary chatbot capable of extracting questions and answers from financial text data. It showcases the potential of using AI for automating tasks like question answering and generating question lists from existing text sources."
+**Overall:** This code effectively demonstrates how to leverage OpenAI's API to build a rudimentary chatbot capable of extracting questions and answers from financial text data. It showcases the potential of using AI for automating tasks like question answering and generating question lists from existing text sources.","Here are 3-5 insightful questions and brief answers based on the code analysis:
+
+**Question:** What is the purpose of the `qgen` function, and how does it generate questions from the input text?
+**Answer:** The `qgen` function generates a list of questions from the input text by using the OpenAI API to create a chat completion with the input text as the user message. It instructs the model to respond with a list of 5-10 questions, each on its own line, without any introductory text or numbers.
+
+**Question:** What is the role of the `agen` function in the code?
+**Answer:** The `agen` function takes a specific question and uses the OpenAI API to generate a comprehensive answer based solely on the provided context. It creates a chat completion with the input text as the system message and the question as the user message, instructing the model to provide an answer.
+
+**Question:** How does the code handle the output of generated questions and answers?
+**Answer:** The code stores each generated question and answer pair as a dictionary in the `results` list. It then writes this list into the output CSV file, creating a new CSV with Q&A pairs.
+
+**Question:** What libraries are used in the code to interact with OpenAI's API and handle CSV files?
+**Answer:** The code uses the `openai` library to interact with OpenAI's API and generate text, and the `csv` library to read and write CSV files. Additionally, it uses `sys` and `os` libraries for system-specific functionalities.
+
+**Question:** How is the OpenAI API configured in the code?
+**Answer:** The code stores the connection details for the OpenAI API in variables: `API_BASE_URL`, `MODEL_NAME`, and `API_KEY`. These variables are used to create an instance of the OpenAI client, which interacts with the API to generate text."
 Financial_chatbot/Code/3.2 qna_format.py,"import csv
 
 def convert_csv_to_output(input_file, output_file):
@@ -499,7 +562,22 @@ Here's a breakdown:
 
 **In essence, this code prepares data from a CSV file into a structured format suitable for training a financial chatbot.** 
 
-Let me know if you have any more questions or want to explore specific aspects in more detail!"
+Let me know if you have any more questions or want to explore specific aspects in more detail!","Here are 3-5 insightful questions with brief, informative answers:
+
+**Question:** What is the purpose of skipping the first row in the CSV file using `next(reader)`?
+**Answer:** The first row of the CSV file likely contains headers or metadata that do not need to be included in the output. Skipping this row ensures that only the relevant question-answer pairs are processed.
+
+**Question:** What is the significance of the formatting used when writing the question-answer pair to the output file?
+**Answer:** The formatting, including `<SFT>` and `</SFT>`, `[INST]` and `[/INST]`, `<<SYS>>` and `<</SYS>>`, likely indicates specific instructions or metadata for the chatbot framework. This allows the chatbot to understand the context and intent behind each question.
+
+**Question:** What is the implication of using a `csv.reader` object to iterate over the rows of the CSV file?
+**Answer:** Using a `csv.reader` object makes it easy to work with the CSV data, as it automatically handles tasks such as handling missing or malformed values. This approach also ensures that the code remains flexible and adaptable to different types of CSV files.
+
+**Question:** How might this code be modified to accommodate CSV files with more than two columns?
+**Answer:** To modify the code for CSV files with more than two columns, you would need to adjust the indexing used when extracting column values (e.g., `column_1 = row[0]` and `column_2 = row[1]`). You could use a loop or other approach to handle multiple columns dynamically.
+
+**Question:** What benefits might this code provide in terms of data preprocessing for chatbot training?
+**Answer:** This code streamlines the process of preparing question-answer pairs from a CSV file, making it easier to integrate with chatbot development workflows. By automating the conversion process, developers can save time and focus on other aspects of building their chatbots."
 Financial_chatbot/Code/data_scrap.py,"from pathlib import Path
 from typing import List, Optional
 import itertools
@@ -624,7 +702,16 @@ This code snippet is designed to download SEC filings from the Edgar database an
 
 
 
-**Overall, this code provides a good foundation for downloading and converting SEC filings. By implementing the suggested improvements, you can make it more robust, maintainable, and user-friendly.**"
+**Overall, this code provides a good foundation for downloading and converting SEC filings. By implementing the suggested improvements, you can make it more robust, maintainable, and user-friendly.**","Here are 3-5 insightful questions with brief, informative answers:
+
+**Q1: What is the purpose of the `filing_exists` function in this code?**
+Answer: The `filing_exists` function checks if a specific filing already exists in the specified directory before downloading it.
+
+**Q2: How does the code handle errors when converting HTML files to PDF using `pdfkit`?**
+Answer: If an error occurs during the conversion process, the code catches the exception and prints an error message indicating which file failed to convert.
+
+**Q3: What library is used for downloading SEC filings from Edgar in this code snippet?**
+Answer: The `sec_edgar_downloader` library is used for downloading SEC filings from Edgar."
 Financial_chatbot/Code/summarizer_openai.py,"from openai import OpenAI
 
 client = OpenAI(api_key=""your_openai_api_key_here"")
@@ -686,7 +773,19 @@ if __name__ == ""__main__"":
 - **Model Choice:** You can experiment with different OpenAI models by changing the `model` parameter in `generate_summary`.  
 - **Token Limit:** The `max_tokens` parameter controls the length of the generated summary. Adjust this as needed.
 
-Let me know if you have any more questions or want to explore specific aspects of the code further!"
+Let me know if you have any more questions or want to explore specific aspects of the code further!","Here are 3-5 insightful questions with brief, informative answers:
+
+Question: What is the primary purpose of the `read_text_file` function in this code?
+Answer: The `read_text_file` function reads the entire contents of a text file specified by its path and returns it as a single string.
+
+Question: How does the `generate_summary` function interact with the OpenAI API to produce a summary of the input text?
+Answer: The `generate_summary` function sends a request to the OpenAI API using the chat completion endpoint, including a system message instructing the AI to act as an expert in analyzing 10-Q reports and generating summaries, and a user message containing the input text. It then extracts the generated summary from the API response.
+
+Question: What is the significance of the `max_tokens` parameter in the `generate_summary` function?
+Answer: The `max_tokens` parameter controls the length of the generated summary, allowing you to adjust the maximum number of tokens (characters) included in the output. This can help balance the trade-off between summary brevity and content accuracy.
+
+Question: How does the code handle the OpenAI API key and model selection?
+Answer: The API key is hardcoded into the script as `""your_openai_api_key_here""`, which should be replaced with your actual API key obtained from OpenAI. Model selection can be customized by modifying the `model` parameter in the `generate_summary` function, allowing you to experiment with different OpenAI models."
 Github_bot/Issue_summarizer.py,"import csv
 import logging
 import time
@@ -816,7 +915,21 @@ This Python script automates the process of summarizing issue descriptions from 
 
 
 
-Let me know if you have any further questions or would like more details on any specific part of the code!"
+Let me know if you have any further questions or would like more details on any specific part of the code!","Here are 3-5 insightful questions and brief answers based on the provided content and summary:
+
+**Question:** What is the primary function of the `summarize_text` function, and how does it utilize the OpenAI API to achieve its goal?
+**Answer:** The `summarize_text` function takes text as input and uses the OpenAI API's `chat.completion` endpoint to send a prompt instructing Llama to summarize the text concisely. It returns the generated summary or an error message if something goes wrong.
+
+**Question:** How does the script parse the GitHub repository URL provided by the user, and what information is extracted from it?
+**Answer:** The script uses the `urlparse` function from the `urllib.parse` library to parse the GitHub repository URL. It extracts the owner and repository name from the parsed URL path.
+
+**Question:** What happens if an error occurs during the execution of the `summarize_text` or `process_issues` functions, and how are these errors handled?
+**Answer:** If an error occurs during the execution of either function, the script logs an error message with the relevant details. The error is not propagated further, ensuring that the rest of the script remains unaffected.
+
+**Question:** What is the purpose of logging in the script, and what information is logged at different points?
+**Answer:** Logging is used for debugging purposes to track the progress and any issues encountered during the execution of the script. The script logs messages at various points, including when an API call is made, when processing an issue, or when an error occurs.
+
+Let me know if you'd like more questions or have further requests!"
 Github_bot/repo_summarizer.py,"import os
 import csv
 import requests
@@ -971,4 +1084,13 @@ Here's a breakdown:
 - **Customization Options:** Allowing users to specify summarization parameters (e.g., length, style) would provide more control over the output.
 
 
-Let me know if you have any other questions or need further clarification!"
+Let me know if you have any other questions or need further clarification!","Here are 3-5 insightful questions and brief, informative answers based on the provided content:
+
+**Question:** How does the script handle potential errors during the summarization process?
+**Answer:** The `summarize_text()` function includes error handling using a try-except block. If an error occurs (e.g., API request fails), it logs the error message and returns a generic ""Error: Could not summarize"" response.
+
+**Question:** Can the script handle large repositories with many files, or is there a performance bottleneck?
+**Answer:** The `process_files()` function retrieves all files in the repository using the GitHub API. However, due to rate limits on the API (not explicitly stated in the code), it's possible that processing very large repositories might exceed these limits.
+
+**Question:** How can users customize the summarization process or output?
+**Answer:** While the script doesn't currently allow for customization options like specifying summarization parameters, modifying the `summarize_text()` function to accept additional arguments (e.g., length, style) could provide more flexibility."
