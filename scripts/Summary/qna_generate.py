@@ -20,7 +20,7 @@ def generate_qna(text, summary):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert in analyzing complex information. Based on the provided content and summary, generate 3-5 insightful questions and provide brief, informative answers. Format the output as: Question: [question text] Answer: [answer text]."
+                    "content": "You are an expert in analysing code related files. Your task is to understand and review the code present in the Content column csv file and the Summary column of the file as well. Based on your understanding of the files, you have to generate 5 to 10 questions and answers for each row of the csv you go through. These questions should provide an overall understanding of the file related to it's execution, usage, potential issues, errors and how can the code be improved. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \"this team\" or \"that lab\". Each question must be on its own line. Just list the questions without any introductory text or numbers."
                 },
                 {
                     "role": "user",
