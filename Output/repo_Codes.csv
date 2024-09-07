@@ -1,4 +1,4 @@
-path,content
+Path,Content
 Financial_chatbot/Code/0. text_pre_process.py,"def split_into_sentences(text, words_per_sentence=10):
     words = text.split()
     sentences = []
