@@ -2,8 +2,8 @@ import openai
 import csv
 import sys
 
-API_BASE_URL = "https://llama.us.gaianet.network/v1"
-MODEL_NAME = "llama"
+API_BASE_URL = "https://phi.us.gaianet.network/v1"
+MODEL_NAME = "phi"
 API_KEY = "GAIA"
 
 client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
@@ -24,7 +24,7 @@ def summarize(source_text):
         model=MODEL_NAME,
         stream=False,
     )
-    return response.choices[0].message.content
+    return response.choices[0].message['content'].strip()
 
 def qgen(source_text):
     """Generate 5 to 10 questions based on the code/content."""
@@ -32,7 +32,7 @@ def qgen(source_text):
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert software engineer. Generate a list of 5 to 10 insightful questions based on the following code or content. Each question must be self-contained and specific to the provided content.Just list the questions without any introductory text or numbers",
+                "content": "You are an expert software engineer. Generate a list of 5 to 10 insightful questions based on the following code or content. Each question must be self-contained and specific to the provided content. Just list the questions without any introductory text or numbers.",
             },
             {
                 "role": "user",
@@ -42,7 +42,7 @@ def qgen(source_text):
         model=MODEL_NAME,
         stream=False,
     )
-    return response.choices[0].message.content
+    return response.choices[0].message['content'].strip()
 
 def agen(source_text, question):
     """Generate answers for each question based on the provided code/content."""
@@ -60,39 +60,42 @@ def agen(source_text, question):
         model=MODEL_NAME,
         stream=False,
     )
-    return response.choices[0].message.content
+    return response.choices[0].message['content'].strip()
 
 def main():
     results = []
     arguments = sys.argv[1:]
 
-    # Open the input CSV file (containing Path and Content)
-    with open(arguments[0], 'r', newline='') as csvfile:
+    with open(arguments[0], 'r', newline='', encoding='utf-8') as csvfile:
         csv_reader = csv.DictReader(csvfile)
         
         for row in csv_reader:
             print(f"Processing {row['Path']}")
 
-            # Generate Summary for the code/content
+            # Get the summary
             summary = summarize(row['Content'])
+            
+            # Get the questions
             questions = qgen(row['Content']).splitlines()
 
-            # Generate Q&A pairs
+            # Generate QnA
+            qna_list = []
             for q in questions:
-                if len(q.strip()) == 0:
-                    continue
-                answer = agen(row['Content'], q)
+                if q.strip():
+                    answer = agen(row['Content'], q)
+                    qna_list.append(f"Q: {q}\nA: {answer}")
 
-                # Append the Summary, Question, and Answer to the result
-                results.append({
-                    "Summary": summary,
-                    "Question": q,
-                    "Answer": answer
-                })
+            # Combine summary and QnA
+            qna_combined = f"Summary:\n{summary}\n\nQnA:\n" + "\n\n".join(qna_list)
 
-    # Write the results to the output CSV file (with Summary, Question, and Answer columns)
+            # Append to results
+            results.append({
+                "Content": row['Content'],
+                "Summary and QnA": qna_combined
+            })
+
     with open(arguments[1], 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Summary', 'Question', 'Answer']
+        fieldnames = ['Content', 'Summary and QnA']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()

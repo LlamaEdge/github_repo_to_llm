@@ -54,6 +54,6 @@ def generate_qna_csv(input_csv_file, output_csv_file):
         logging.error(f"Error processing CSV: {e}")
 
 if __name__ == "__main__":
-    input_csv_file = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\repo_Codes_summary_gemma.csv"  
-    output_csv_file = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\repo_Codes_summary_gemma_qna.csv"  
+    input_csv_file = ""  #Replace with your content and summary CSV file path
+    output_csv_file = ""  #Replace with your summary+Qna CSV file path
     generate_qna_csv(input_csv_file, output_csv_file)
