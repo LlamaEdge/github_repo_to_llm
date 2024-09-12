@@ -70,9 +70,9 @@ def main():
     output_path = "C:\\Users\\91745\\OneDrive\\Desktop\\Github_analyser\\Output\\repo_Codes_test_merge.csv"
 
     with open(input_path, 'r', newline='', encoding='utf-8') as csvfile:
-        csv_reader = csv.DictReader(csvfile)  # Use DictReader to access columns by name
+        csv_reader = csv.DictReader(csvfile) 
         for row in csv_reader:
-            main_content = row['Content']  # Use 'Content' column
+            main_content = row['Content'] 
 
             # Summarize the content
             summary = summarize(main_content)
@@ -85,17 +85,13 @@ def main():
                     continue
                 answer = agen(main_content, q)
                 qna_list.append(f"Q: {q}\nA: {answer}")
-
-            # Combine summary and QnA into one string
+                
             summary_and_qna = f"Summary:\n{summary}\n\nQuestions and Answers:\n" + "\n\n".join(qna_list)
-
-            # Append the result with main content in one column and summary with Q&A in another
             results.append([main_content, summary_and_qna])
 
-    # Write results to the output CSV file
     with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["Main Content", "Summary and Q&A"])  # Header row
+        writer.writerow(["Content", "Summary and Q&A"])
         writer.writerows(results)
 
 if __name__ == "__main__":
