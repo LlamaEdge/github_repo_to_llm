@@ -6,7 +6,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 
 API_BASE_URL = "https://llama.us.gaianet.network/v1"
-MODEL_NAME = "	llama"
+MODEL_NAME = "llama"
 API_KEY = "GAIA"
 
 client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
