@@ -66,8 +66,8 @@ def agen(source_text, question):
 
 def main():
     results = []
-    input_path = "C:\\Users\\91745\\OneDrive\\Desktop\\Github_analyser\\Output\\repo_Codes.csv"
-    output_path = "C:\\Users\\91745\\OneDrive\\Desktop\\Github_analyser\\Output\\repo_Codes_test_merge.csv"
+    input_path = "" # Add path to input file containing Content
+    output_path = "" # Add path to output file containing Content and Summary
 
     with open(input_path, 'r', newline='', encoding='utf-8') as csvfile:
         csv_reader = csv.DictReader(csvfile) 
