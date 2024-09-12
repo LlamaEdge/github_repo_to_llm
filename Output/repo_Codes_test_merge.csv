@@ -1,0 +1,1615 @@
+Main Content,Summary and Q&A
+"def split_into_sentences(text, words_per_sentence=10):
+    words = text.split()
+    sentences = []
+
+    for i in range(0, len(words), words_per_sentence):
+        sentence = ' '.join(words[i:i + words_per_sentence])
+        sentences.append(sentence)
+        
+    return '\n\n'.join(sentences)
+
+with open('path_to_your_input_file', 'r') as file:
+    content = file.read()
+
+modified_content = split_into_sentences(content)
+
+with open('path_to_your_output_file', 'w') as file:
+    file.write(modified_content)
+
+print(""Text has been split into sentences with 10 words each, and blank lines have been added."")
+","Summary:
+Here is a comprehensive summary of the text:
+
+**Code Summary**
+
+The code defines a function `split_into_sentences` that takes two parameters: `text` and `words_per_sentence`. The function splits the input `text` into sentences, where each sentence contains approximately `words_per_sentence` words. The function then returns the modified text with blank lines added between each sentence.
+
+**Functionality**
+
+1. The code reads the content of an input file specified by `'path_to_your_input_file'`.
+2. It calls the `split_into_sentences` function to split the content into sentences.
+3. The modified content is written to an output file specified by `'path_to_your_output_file'`.
+4. A message is printed to the console indicating that the text has been successfully processed.
+
+**Key Features**
+
+* Sentence splitting based on a fixed number of words per sentence (`words_per_sentence` parameter).
+* Blank lines added between each sentence.
+* Input and output file paths are specified as variables, allowing for flexibility in usage.
+
+Questions and Answers:
+Q: What is the name of the function that splits text into sentences?
+A: The name of the function that splits text into sentences is `split_into_sentences`.
+
+Q: What is the default number of words per sentence in this function?
+A: The default number of words per sentence in this function is 10. This is specified by the `words_per_sentence` parameter, which has a default value of 10 when not provided as an argument to the function.
+
+Q: How are the words in the input text split?
+A: The words in the input text are split using the `split()` method, which splits a string into a list of substrings (words) separated by whitespace characters (spaces, tabs, etc.). 
+
+In other words, when you call `text.split()`, it returns a list where each element is a word from the original text. The default separator used by the `split()` method is any amount of whitespace.
+
+Here's an example to illustrate this:
+
+```python
+text = ""Hello World this is a test""
+words = text.split()
+print(words)  # Output: ['Hello', 'World', 'this', 'is', 'a', 'test']
+```
+
+In the code provided, the `split()` method is used without any arguments, so it splits the input text into words based on whitespace characters.
+
+Q: What data structure is used to store the individual sentences?
+A: In the given code, a list is used to store the individual sentences. The list is named `sentences` and it is initialized as an empty list at the beginning of the function.
+
+Here's the relevant line of code:
+
+```python
+sentences = []
+```
+
+As the function iterates over the words in the input text, each sentence is appended to this list using the `append()` method. The resulting list contains all the individual sentences, which are then joined together with newline characters (`\n\n`) before being returned by the function.
+
+So, to summarize, a list is used as the data structure to store the individual sentences in this code.
+
+Q: In what range do we iterate over the list of words?
+A: We iterate over the list of words in a range from 0 to `len(words)` with a step size of `words_per_sentence`. This is achieved using the following line of code:
+
+```python
+for i in range(0, len(words), words_per_sentence):
+```
+
+This means that we will start at index 0 and increment by `words_per_sentence` each time through the loop. The loop will continue until it reaches or exceeds the length of the list (`len(words)`).
+
+Q: What does each iteration of the loop append to the 'sentences' list?
+A: In each iteration of the loop, a slice of words from the `words` list is appended to the `sentences` list. The slice starts at index `i` and ends at `i + words_per_sentence`.
+
+Here's what happens in more detail:
+
+1. `i` is set to 0 on the first iteration.
+2. `words[i:i + words_per_sentence]` returns a slice of the first `words_per_sentence` (10) elements from the `words` list, starting at index 0.
+3. `' '.join(words[i:i + words_per_sentence])` joins these words back into a string with spaces in between, effectively creating a sentence.
+4. This sentence is appended to the `sentences` list.
+
+On subsequent iterations:
+
+1. The value of `i` increments by `words_per_sentence` (10) each time.
+2. A new slice of words is created from index `i` to `i + words_per_sentence`.
+3. Another sentence is created by joining these words and appended to the `sentences` list.
+
+This process continues until all words in the `words` list have been processed, at which point the loop exits and the modified content is written to the output file.
+
+Q: How are the sentences joined together before being returned by the function?
+A: According to the code, the sentences are joined together using a newline character (`\n`) and two blank lines (`\n\n`). This is done by calling the `join()` method on an empty string (`''`), passing in the list of sentences (`sentences`) as the argument.
+
+Here's the specific line of code that does this:
+
+```python
+return '\n\n'.join(sentences)
+```
+
+This means that each sentence will be followed by two blank lines, effectively creating a new paragraph for each group of 10 words.
+
+Q: Where is the content of the input file read from?
+A: The content of the input file is read from a specified path, which is represented by `'path_to_your_input_file'`. This path should be replaced with the actual path to your input file.
+
+Q: Where is the modified content written to in the output file?
+A: The modified content is written to the output file specified by `'path_to_your_output_file'`. This path should be replaced with the actual file path where you want to save the modified text.
+
+For example, if you want to write the modified content to a file named `output.txt` in the same directory as your script, you would replace `'path_to_your_output_file'` with `'output.txt'`.
+
+Here's an example of how it might look:
+
+```python
+with open('input.txt', 'r') as file:
+    content = file.read()
+
+modified_content = split_into_sentences(content)
+
+with open('output.txt', 'w') as file:
+    file.write(modified_content)
+```
+
+In this case, the modified content will be written to a file named `output.txt` in the same directory as your script.
+
+Q: What message is printed to the console after splitting the text into sentences?
+A: The message printed to the console after splitting the text into sentences is:
+
+""Text has been split into sentences with 10 words each, and blank lines have been added."""
+"import PyPDF2
+import csv
+
+def extract_text_from_pdf(pdf_file_path):
+    pdf_reader = PyPDF2.PdfReader(pdf_file_path)
+    pages_content = []
+
+    for page_num in range(len(pdf_reader.pages)):
+        page = pdf_reader.pages[page_num]
+        text = page.extract_text()
+        pages_content.append(text)
+    
+    return pages_content
+
+def save_pages_to_csv(pages_content, output_csv_file):
+    with open(output_csv_file, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow([""Page"", ""Content""]) 
+        for i, content in enumerate(pages_content):
+            writer.writerow([i + 1, content])
+
+if __name__ == ""__main__"":
+    input_pdf_file = '.pdf'  # Replace with your PDF file path
+    output_csv_file = '.csv'  # Replace with your desired output CSV file path
+    
+    pages_content = extract_text_from_pdf(input_pdf_file)
+    save_pages_to_csv(pages_content, output_csv_file)
+
+    print(f""Content of each page has been extracted and saved to {output_csv_file}"")
+","Summary:
+**Summary of the Code**
+
+The provided code is a Python script that extracts text from a PDF file and saves it to a CSV file. The script uses two main functions: `extract_text_from_pdf` and `save_pages_to_csv`.
+
+**Function 1: `extract_text_from_pdf`**
+
+This function takes a PDF file path as input, reads the PDF using PyPDF2 library, and extracts text from each page of the PDF. It returns a list of strings, where each string represents the content of a single page.
+
+Here's a step-by-step breakdown:
+
+* Import PyPDF2 library
+* Create a `PdfReader` object to read the PDF file
+* Initialize an empty list `pages_content` to store the extracted text from each page
+* Iterate through each page in the PDF using a for loop
+* For each page, extract the text using the `extract_text()` method and append it to the `pages_content` list
+* Return the `pages_content` list
+
+**Function 2: `save_pages_to_csv`**
+
+This function takes two inputs: a list of strings (`pages_content`) and an output CSV file path. It writes the extracted text from each page to a CSV file.
+
+Here's a step-by-step breakdown:
+
+* Open the output CSV file in write mode using the `open()` function
+* Create a `csv.writer` object to write data to the CSV file
+* Write a header row with column names ""Page"" and ""Content""
+* Iterate through each page content string in the `pages_content` list
+* For each page, write a new row to the CSV file with the page number (incremented by 1) as the first column and the page content as the second column
+
+**Main Execution**
+
+The script checks if it's being run directly (i.e., not imported as a module in another script). If so, it sets the input PDF file path and output CSV file path. It then calls the `extract_text_from_pdf` function to extract text from the PDF and stores the result in the `pages_content` variable. Finally, it calls the `save_pages_to_csv` function to save the extracted text to a CSV file.
+
+The script prints a success message indicating that the content of each page has been extracted and saved to the output CSV file.
+
+Questions and Answers:
+Q: What is the name of the library used for reading PDF files?
+A: The library used for reading PDF files in the provided code is `PyPDF2`.
+
+Q: What is the name of the function that extracts text from a PDF file?
+A: The function that extracts text from a PDF file is named `extract_text_from_pdf`.
+
+Q: What is the name of the variable that stores the content of each page in the PDF file?
+A: The variable that stores the content of each page in the PDF file is named `pages_content`.
+
+Q: What is the name of the loop that iterates over the pages in the PDF file?
+A: The name of the loop that iterates over the pages in the PDF file is `for page_num in range(len(pdf_reader.pages)):`. However, this is a common Python idiom and not explicitly named.
+
+A more descriptive name for this loop could be `for page_number in range(len(pdf_reader.pages)):` or simply `for page in pdf_reader.pages:` (which is used later in the code).
+
+Q: What is the name of the object used to read the PDF file?
+A: The object used to read the PDF file is called `pdf_reader`. It is an instance of the `PdfReader` class from the PyPDF2 library.
+
+Q: What is the name of the function that saves the extracted text to a CSV file?
+A: The name of the function that saves the extracted text to a CSV file is `save_pages_to_csv`.
+
+Q: What is the name of the variable that stores the output CSV file path?
+A: The variable that stores the output CSV file path is named `output_csv_file`.
+
+Q: What is the encoding used when writing to the CSV file?
+A: The encoding used when writing to the CSV file is 'utf-8'. This can be seen in the following line of code:
+
+`with open(output_csv_file, 'w', newline='', encoding='utf-8') as file:`
+
+Q: What is the mode in which the output CSV file is opened?
+A: The output CSV file is opened in 'w' mode, which stands for ""write"" mode. This means that if the specified file already exists, its contents will be overwritten with the new data written to it.
+
+Here's a breakdown of the relevant line from the code:
+
+```python
+with open(output_csv_file, 'w', newline='', encoding='utf-8') as file:
+```
+
+In this line:
+
+* `'w'` specifies that the file should be opened in write mode.
+* `newline=''` is used to prevent extra blank lines from being inserted into the CSV file on Windows platforms. This is a common issue when working with CSV files and Python's `csv` module.
+* `encoding='utf-8'` specifies the character encoding to use when reading or writing the file. In this case, it's set to UTF-8, which is a widely-used encoding standard that can handle most characters from languages around the world."
+"import pandas as pd
+import openai
+import logging
+import time
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def summarize_text(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert financial analyst. You have been given a 10-Q quarterly report of a public company. Your tasks are: Summarization: Read the context provided from the 10-Q report and create a concise, coherent summary that captures the key points about the company's financial performance, risks, opportunities, and future outlook. The summary should be written in a way that is easy to understand by stakeholders who may not have a financial background. Question Generation: After creating the summary, generate 3-5 insightful questions based on the content of the report. These questions should help stakeholders further explore key issues, risks, or trends that were mentioned in the summary.Answer Generation: Provide brief, informative answers to the questions you generated. These answers should be based on the content of the report, using the context you have summarized."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f""Error in summarizing text: {e}"")
+        return ""Error: Could not summarize""
+
+def summarize_csv_content(input_csv_file, output_csv_file):
+    try:
+        df = pd.read_csv(input_csv_file)
+        if 'Content' not in df.columns:
+            raise ValueError(""'Content' column not found in the input CSV file."")
+
+        logging.info(""Starting summarization..."")
+        df['summary'] = df['Content'].apply(lambda x: summarize_text(x) if pd.notnull(x) else """")
+
+        df.to_csv(output_csv_file, index=False)
+        logging.info(f""Summaries have been generated and saved to {output_csv_file}"")
+    except Exception as e:
+        logging.error(f""Error processing CSV: {e}"")
+
+if __name__ == ""__main__"":
+    input_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/out.csv'  
+    output_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/summary_qna.csv' 
+
+    summarize_csv_content(input_csv_file, output_csv_file)
+","Summary:
+Here is a comprehensive summary of the provided code:
+
+**Overview**
+
+The code is designed to summarize financial reports from a CSV file using an OpenAI API. It uses the LLaMA model to generate summaries, questions, and answers based on the content of the reports.
+
+**Importing Libraries**
+
+The code imports the following libraries:
+
+* `pandas` for data manipulation
+* `openai` for interacting with the OpenAI API
+* `logging` for logging purposes
+* `time` for measuring execution time
+
+**Setup Logging**
+
+The code sets up basic logging to display information and error messages.
+
+**API Configuration**
+
+The code configures the OpenAI API by setting the base URL, model name, and API key.
+
+**Summarize Text Function**
+
+The `summarize_text` function takes a text input and uses the OpenAI API to generate a summary. It:
+
+1. Creates a chat completion request with the LLaMA model
+2. Sets the system message to provide context for summarization
+3. Sets the user message to the input text
+4. Retrieves the response from the OpenAI API
+5. Returns the generated summary
+
+**Summarize CSV Content Function**
+
+The `summarize_csv_content` function takes an input CSV file and an output CSV file as arguments. It:
+
+1. Reads the input CSV file using pandas
+2. Checks if the 'Content' column exists in the dataframe
+3. Applies the `summarize_text` function to each row of the 'Content' column
+4. Saves the summarized text to a new column called 'summary'
+5. Writes the updated dataframe to the output CSV file
+
+**Main Function**
+
+The main function calls the `summarize_csv_content` function with an input CSV file and an output CSV file as arguments.
+
+In summary, this code is designed to automate the process of summarizing financial reports from a CSV file using an OpenAI API. It uses the LLaMA model to generate summaries, questions, and answers based on the content of the reports.
+
+Questions and Answers:
+Q: What is the base URL for the API?
+A: The base URL for the API is `https://llama.us.gaianet.network/v1`.
+
+Q: What is the name of the model used in the code?
+A: The model used in the code is named ""llama"".
+
+Q: What is the API key used to authenticate with the API?
+A: The API key used to authenticate with the API is `GAIA`. It is stored in a variable named `API_KEY` at the top of the code snippet.
+
+Q: What is the role of the system message in the chat completion request?
+A: In the provided code, the system message in the chat completion request is used to provide context and instructions to the LLaMA model. The role of this message is to inform the model about its task and the expected output.
+
+Here's a breakdown of what the system message contains:
+
+1. ""You are an expert financial analyst"": This statement informs the model that it should respond as if it has expertise in finance.
+2. ""You have been given a 10-Q quarterly report of a public company"": This sentence provides context about the type of document the model is supposed to work with (a 10-Q quarterly report).
+3. ""Your tasks are: Summarization, Question Generation, and Answer Generation"": These three tasks specify what the model should do:
+	* Summarize the content provided from the 10-Q report.
+	* Generate 3-5 insightful questions based on the content of the report.
+	* Provide brief, informative answers to the generated questions.
+
+By including this system message in the chat completion request, the code is effectively telling the LLaMA model how to process the input text and what kind of output it should produce.
+
+Q: What is the content of the system message in the chat completion request?
+A: The content of the system message in the chat completion request is:
+
+""You are an expert financial analyst. You have been given a 10-Q quarterly report of a public company. Your tasks are: Summarization: Read the context provided from the 10-Q report and create a concise, coherent summary that captures the key points about the company's financial performance, risks, opportunities, and future outlook. The summary should be written in a way that is easy to understand by stakeholders who may not have a financial background. Question Generation: After creating the summary, generate 3-5 insightful questions based on the content of the report. These questions should help stakeholders further explore key issues, risks, or trends that were mentioned in the summary.Answer Generation: Provide brief, informative answers to the questions you generated. These answers should be based on the content of the report, using the context you have summarized.""
+
+Q: What is the role of the user message in the chat completion request?
+A: In the provided code, the user message in the chat completion request is represented by the dictionary `{""role"": ""user"", ""content"": text}`. This dictionary is part of the list of messages passed to the `client.chat.completions.create()` method.
+
+The role of this user message is to provide the input text that the LLaMA model should respond to. The content of this message, which is stored in the variable `text`, is the actual text that needs to be summarized by the model.
+
+In other words, the user message serves as the input text for the summarization task, and the model's response will be a summary of this input text.
+
+Q: What is the content of the user message in the chat completion request?
+A: The content of the user message in the chat completion request is the text that is being summarized. This text is passed to the `summarize_text` function as an argument, and it is used by the OpenAI API to generate a summary.
+
+In other words, the user message is the input CSV file specified in the code, which contains a column named 'Content'. The content of this column is what is being summarized.
+
+Q: What is the model name used for the chat completion request?
+A: The model name used for the chat completion request is ""llama"".
+
+Q: What is the stream parameter set to in the chat completion request?
+A: The `stream` parameter is set to `False` in the chat completion request.
+
+Q: What is the output file path for the summarized CSV?
+A: The output file path for the summarized CSV is:
+
+`/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/summary_qna.csv`
+
+This is specified in the `output_csv_file` variable within the `if __name__ == ""__main__"":` block."
+"import pandas as pd
+import openai
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def generate_qna(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert financial analyst. Your task is to generate 3-5 insightful questions and provide brief, informative answers based on the provided text. The questions and answers should help stakeholders further explore key issues, risks, or trends mentioned in the text. Provide the output in the following format: For each question, provide the corresponding answer."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        
+        raw_content = response.choices[0].message['content'].strip()
+        logging.info(f""Raw response content: {raw_content}"")
+        
+        qna_pairs = []
+        for line in raw_content.split('\n'):
+            if 'Answer: ' in line:
+                question_part = line.split('Answer: ')[0].strip()
+                answer_part = line.split('Answer: ')[1].strip()
+                if 'Question: ' in question_part:
+                    question = question_part.replace('Question: ', '').strip()
+                    qna_pairs.append((question, answer_part))
+        
+        questions, answers = zip(*qna_pairs) if qna_pairs else ([], [])
+        
+        return list(questions), list(answers)
+    except Exception as e:
+        logging.error(f""Error in generating Q&A: {e}"")
+        return [], []
+
+def generate_qna_csv(input_csv_file, output_csv_file):
+    try:
+        df = pd.read_csv(input_csv_file)
+        if 'Content' not in df.columns:
+            raise ValueError(""'Content' column not found in the input CSV file."")
+
+        questions_list = []
+        answers_list = []
+
+        logging.info(""Starting Q&A generation..."")
+        for index, row in df.iterrows():
+            if pd.notnull(row['Content']):
+                questions, answers = generate_qna(row['Content'])
+                for q, a in zip(questions, answers):
+                    questions_list.append(q)
+                    answers_list.append(a)
+
+        qna_df = pd.DataFrame({
+            'Question': questions_list,
+            'Answer': answers_list
+        })
+
+        qna_df.to_csv(output_csv_file, index=False)
+        logging.info(f""Q&A have been generated and saved to {output_csv_file}"")
+    except Exception as e:
+        logging.error(f""Error processing CSV: {e}"")
+
+if __name__ == ""__main__"":
+    input_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test_summary.csv'  
+    output_csv_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna.csv' 
+
+    generate_qna_csv(input_csv_file, output_csv_file)
+","Summary:
+Here is a comprehensive summary of the provided code:
+
+**Overview**
+
+The code is designed to generate Q&A pairs from a given text using the LLaMA AI model and save them to a CSV file. It uses the OpenAI API to interact with the LLaMA model.
+
+**Importing Libraries**
+
+The code imports the following libraries:
+
+* `pandas` for data manipulation
+* `openai` for interacting with the LLaMA AI model
+* `logging` for logging purposes
+* `time` for measuring execution time
+
+**Setting up API Connection**
+
+The code sets up a connection to the OpenAI API using the `base_url`, `model_name`, and `api_key`. The `API_KEY` is set to ""GAIA"".
+
+**Defining Functions**
+
+The code defines two functions:
+
+1. `generate_qna(text)`: This function takes a text as input, generates Q&A pairs using the LLaMA model, and returns them as lists of questions and answers.
+2. `generate_qna_csv(input_csv_file, output_csv_file)`: This function reads a CSV file, extracts the content from each row, generates Q&A pairs for each content using the `generate_qna` function, and saves the resulting Q&A pairs to a new CSV file.
+
+**Main Execution**
+
+The code checks if it is being executed as the main program (`if __name__ == ""__main__"":`) and then calls the `generate_qna_csv` function with an input CSV file and an output CSV file. The input CSV file contains text data, and the output CSV file will contain the generated Q&A pairs.
+
+**Error Handling**
+
+The code includes error handling mechanisms to catch any exceptions that may occur during execution. If an exception occurs, it logs the error message using the `logging` library.
+
+Overall, this code is designed to automate the process of generating Q&A pairs from a given text using the LLaMA AI model and saving them to a CSV file.
+
+Questions and Answers:
+Q: What is the base URL for the OpenAI API?
+A: The base URL for the OpenAI API is `https://llama.us.gaianet.network/v1`.
+
+Q: What is the name of the model used in the chat completion?
+A: The model used in the chat completion is named ""llama"".
+
+Q: What is the API key used to authenticate with the OpenAI API?
+A: The API key used to authenticate with the OpenAI API is `API_KEY = ""GAIA""`.
+
+Q: What is the role assigned to the system message in the chat completion request?
+A: In the provided code, the role assigned to the system message in the chat completion request is:
+
+```
+""role"": ""system"",
+```
+
+This indicates that the system message is intended to provide context or instructions to the model, rather than being a question or statement from a user. In this specific case, the system message is instructing the model to behave as an expert financial analyst and generate 3-5 insightful questions and answers based on the provided text.
+
+Q: What is the content provided by the user in the chat completion request?
+A: The content provided by the user in the chat completion request is not explicitly shown in the code snippet. However, based on the function `generate_qna(text)`, it appears that the content is passed as a parameter to this function.
+
+In the main part of the script, there is a call to `generate_qna_csv(input_csv_file, output_csv_file)` where `input_csv_file` is specified as `/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test_summary.csv`. This suggests that the content being passed to `generate_qna(text)` is likely read from this CSV file.
+
+However, without more information or a specific line of code showing how the text is extracted from the CSV file and passed to `generate_qna(text)`, it's difficult to provide a definitive answer. 
+
+But based on the function definition `def generate_qna_csv(input_csv_file, output_csv_file):` where it says `df = pd.read_csv(input_csv_file)` which reads the content of the csv file into a pandas DataFrame, we can infer that the content is likely read from this CSV file.
+
+So, to answer your question, the content provided by the user in the chat completion request is likely the text data stored in the `/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test_summary.csv` CSV file.
+
+Q: What is the format of the output generated by the chat completion model?
+A: The format of the output generated by the chat completion model is as follows:
+
+For each question, provide the corresponding answer.
+
+This means that the output will be in a Q&A format, where each line represents a question followed by its corresponding answer. The questions and answers are separated by the string ""Answer: "". For example:
+
+Question: What is the current market trend for stocks?
+Answer: The current market trend for stocks is bullish.
+
+The code snippet provided uses this format to extract the questions and answers from the raw response content generated by the chat completion model, and stores them in separate lists.
+
+Q: How many seconds does it take for the API call to complete?
+A: The code logs the time it takes for the API call to complete in seconds. The relevant line of code is:
+
+`logging.info(f""API call took {time.time() - start_time} seconds."")`
+
+This means that the actual time taken by the API call can vary depending on the system load and other factors, but the code does log the time it takes for the API call to complete in seconds.
+
+Q: What is the raw response content received from the OpenAI API?
+A: According to the code, the raw response content received from the OpenAI API is stored in the variable `raw_content`. This variable is assigned the value of `response.choices[0].message['content'].strip()`.
+
+Here's how it's done:
+
+```python
+raw_content = response.choices[0].message['content'].strip()
+logging.info(f""Raw response content: {raw_content}"")
+```
+
+The `response` object contains the result of the API call, and `choices[0]` refers to the first (and only) choice returned by the model. The `message` attribute of this choice contains the actual text generated by the model, which is then stripped of any leading or trailing whitespace using the `strip()` method.
+
+So, if you want to see the raw response content received from the OpenAI API, you can look at the value of the `raw_content` variable.
+
+Q: What is the purpose of the Q&A generation function?
+A: The purpose of the `generate_qna` function is to generate a list of questions and answers based on a given text. The function uses the OpenAI API's chat completion feature to interact with a model, which generates insightful questions and provides brief, informative answers related to the provided text.
+
+Here are some specific goals of the `generate_qna` function:
+
+1. **Extract key issues, risks, or trends**: The function aims to identify important aspects mentioned in the input text and generate questions that help stakeholders further explore these topics.
+2. **Provide informative answers**: For each generated question, the function provides a brief answer that summarizes the relevant information from the input text.
+3. **Output in Q&A format**: The function formats the output as a list of questions and corresponding answers, making it easy to read and understand.
+
+The `generate_qna` function is designed to be used in conjunction with the `generate_qna_csv` function, which processes a CSV file containing input texts and generates Q&A pairs for each text.
+
+Q: What is the name of the input CSV file used in the generate_qna_csv function?
+A: The name of the input CSV file used in the `generate_qna_csv` function is `/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test_summary.csv`."
+"import openai
+import csv
+import sys
+import os
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+def qgen(source_text):
+    client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                ""role"": ""system"",
+                ""content"": ""Respond with a list of 5 to 10 questions. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \""this team\"" or \""that lab\"". Each question must be on its own line. Just list the questions without any introductory text or numbers."",
+            },
+            {
+                ""role"": ""user"",
+                ""content"": source_text,
+            }
+        ],
+        model=MODEL_NAME,
+        stream=False,
+    )
+    return chat_completion.choices[0].message.content
+
+def agen(source_text, question):
+    client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                ""role"": ""system"",
+                ""content"": ""Give a comprehensive and well-reasoned answer to the user question strictly based on the context below.\n"" + source_text,
+            },
+            {
+                ""role"": ""user"",
+                ""content"": question,
+            }
+        ],
+        model=MODEL_NAME,
+        stream=False,
+    )
+    return chat_completion.choices[0].message.content
+
+def main():
+    # Input and output file paths
+    input_file_path = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test.csv'
+    output_file_path = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna_test.csv'
+    
+    results = []
+
+    with open(input_file_path, 'r', newline='') as csvfile:
+        csv_reader = csv.DictReader(csvfile)
+        for row in csv_reader:
+            page_content = row['Content']
+
+            qs = qgen(page_content)
+            for q in qs.splitlines():
+                if len(q.strip()) == 0:
+                    continue
+
+                answer = agen(page_content, q)
+                result = {
+                    'Question': q,
+                    'Answer': answer
+                }
+                results.append(result)
+
+    with open(output_file_path, 'w', newline='') as csvfile:
+        fieldnames = ['Question', 'Answer']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for row in results:
+            writer.writerow(row)
+
+if __name__ == ""__main__"":
+    main()
+","Summary:
+Here is a comprehensive summary of the provided code:
+
+**Overview**
+
+The code is a Python script that uses the OpenAI API to generate questions and answers from a given text. The script reads input data from a CSV file, processes it using two functions (`qgen` and `agen`), and writes the results to another CSV file.
+
+**Imported Libraries**
+
+The script imports the following libraries:
+
+* `openai`: for interacting with the OpenAI API
+* `csv`: for reading and writing CSV files
+* `sys`: not used in this code snippet
+* `os`: not used in this code snippet
+
+**Constants**
+
+The script defines three constants:
+
+* `API_BASE_URL`: the base URL of the OpenAI API (set to ""https://llama.us.gaianet.network/v1"")
+* `MODEL_NAME`: the name of the OpenAI model to use (set to ""llama"")
+* `API_KEY`: the API key for accessing the OpenAI API (set to ""GAIA"")
+
+**Functions**
+
+The script defines two functions:
+
+* `qgen(source_text)`: generates a list of questions from the given text. The function uses the OpenAI API to create a chat completion request with the system message ""Respond with a list of 5 to 10 questions..."" and the user message containing the source text.
+* `agen(source_text, question)`: generates an answer to the given question based on the context provided by the source text. The function uses the OpenAI API to create a chat completion request with the system message ""Give a comprehensive and well-reasoned answer to the user question..."" and the user message containing the question.
+
+**Main Function**
+
+The script defines a `main` function that:
+
+1. Reads input data from a CSV file (`input_file_path`) using the `csv.DictReader`.
+2. Processes each row in the CSV file by calling the `qgen` function to generate questions and then iterating over the generated questions.
+3. For each question, calls the `agen` function to generate an answer based on the context provided by the source text.
+4. Writes the results (questions and answers) to a new CSV file (`output_file_path`) using the `csv.DictWriter`.
+
+**Entry Point**
+
+The script sets up an entry point using the `if __name__ == ""__main__"":` guard, which calls the `main` function when the script is run directly.
+
+Questions and Answers:
+Q: What is the base URL for the OpenAI API?
+A: The base URL for the OpenAI API is `https://llama.us.gaianet.network/v1`.
+
+Q: What is the name of the model used in this code?
+A: The model used in this code is named ""llama"".
+
+Q: What is the API key used to access the OpenAI API?
+A: The API key used to access the OpenAI API is `GAIA`.
+
+Q: What is the path to the input CSV file?
+A: The path to the input CSV file is:
+
+`/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/test.csv`
+
+Q: What is the path to the output CSV file?
+A: The path to the output CSV file is:
+
+`/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna_test.csv`
+
+Q: What is the name of the function that generates questions from a given text?
+A: The function that generates questions from a given text is named `qgen`.
+
+Q: What is the name of the function that answers a question based on a given context and question?
+A: The function that answers a question based on a given context and question is named `agen`.
+
+Q: What is the name of the main function in this code?
+A: The name of the main function in this code is `main`.
+
+Q: What is the purpose of the DictReader class used in this code?
+A: The `DictReader` class is used to read a CSV file and return each row as a dictionary. This allows for easy access to the values in each row by their corresponding keys.
+
+In this specific code, the `DictReader` class is used to read the input CSV file (`test.csv`) and iterate over its rows. The `row` variable in the `for` loop represents each row of the CSV file as a dictionary, where the keys are the column names (e.g., `'Content'`) and the values are the corresponding cell values.
+
+Here's an excerpt from the code that demonstrates this:
+```python
+with open(input_file_path, 'r', newline='') as csvfile:
+    csv_reader = csv.DictReader(csvfile)
+    for row in csv_reader:
+        page_content = row['Content']
+```
+In this example, `row` is a dictionary where `'Content'` is the key and the value is the cell value from the CSV file. This allows the code to easily access the value associated with the `'Content'` column.
+
+The benefits of using `DictReader` include:
+
+* Easy access to values by their corresponding keys
+* Simplified code for iterating over rows and accessing values
+* Improved readability, as the dictionary representation makes it clear what each key-value pair represents.
+
+Q: What is the purpose of the DictWriter class used in this code?
+A: The `DictWriter` class is used to write dictionaries as CSV rows. In this code, it's used to write the results of the question-answering process into a CSV file.
+
+Here's how it works:
+
+1. The `fieldnames` parameter specifies the order and names of the columns in the CSV file.
+2. The `writer.writeheader()` method writes the column headers (i.e., ""Question"" and ""Answer"") to the first row of the CSV file.
+3. For each result dictionary, the `writer.writerow(row)` method writes the key-value pairs as a CSV row.
+
+In this specific code, the `DictWriter` class is used to write the results into a CSV file named `qna_test.csv`, where each row represents a question and its corresponding answer.
+
+Here's an example of what the output might look like:
+
+```
+Question,Answer
+What is the purpose of the DictWriter class?,The DictWriter class is used to write dictionaries as CSV rows.
+How does it work?,It works by specifying the order and names of the columns in the CSV file using the fieldnames parameter.
+```"
+"import csv
+
+def convert_csv_to_output(input_file, output_file):
+    with open(input_file, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)
+
+        with open(output_file, 'w') as outfile:
+            for row in reader:
+                column_1 = row[0]
+                column_2 = row[1]
+                outfile.write(f""<SFT><s>[INST] <<SYS>>\n You are a financial assistant. Provide detailed, clear, and professional financial insights, and ensure that your responses are easy to understand. \n<</SYS>>\n\n {column_1} [/INST] {column_2} \n"")
+
+# Testing the function
+input_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/qna_test.csv'  
+output_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/Text/test.txt' 
+convert_csv_to_output(input_file, output_file)
+","Summary:
+**Summary of the Code**
+
+The provided code is a Python script that imports the `csv` module and defines a function called `convert_csv_to_output`. This function takes two parameters: `input_file` and `output_file`, which are used to read from a CSV file and write to a text file, respectively.
+
+Here's a step-by-step breakdown of what the code does:
+
+1. **Open the input CSV file**: The script opens the specified CSV file in read mode (`'r'`) using the `with` statement.
+2. **Skip the header row**: The `next(reader)` line skips the first row (header) of the CSV file, which is not needed for processing.
+3. **Open the output text file**: A new file is opened in write mode (`'w'`) using the `with` statement.
+4. **Process each row**: The script iterates over each row in the CSV file using a `for` loop.
+5. **Extract column values**: For each row, it extracts the first and second columns ( indexed by 0 and 1, respectively) into variables called `column_1` and `column_2`.
+6. **Write to output file**: The script writes a formatted string to the output text file using an f-string. This string includes:
+	* A header with XML tags (`<SFT>`, `<s>`, etc.)
+	* A message indicating that the user is a financial assistant
+	* The extracted column values, enclosed in square brackets and separated by spaces
+
+**Testing the Function**
+
+The script also includes a test case where it calls the `convert_csv_to_output` function with specific input and output file paths. This allows the developer to verify that the function works as expected.
+
+Overall, this code appears to be designed to convert a CSV file into a text file with a specific format, likely for use in a chatbot or other conversational interface.
+
+Questions and Answers:
+Q: What is the name of the input file used for testing the function?
+A: The name of the input file used for testing the function is 'qna_test.csv'. It is located at '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV/'.
+
+Q: What is the path to the directory where the input file is located?
+A: The path to the directory where the input file is located is:
+
+/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/CSV
+
+Q: What is the name of the output file generated by the function?
+A: The name of the output file generated by the function is specified in the following line:
+
+`output_file = '/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/Text/test.txt'`
+
+So, the output file is named ""test.txt"".
+
+Q: What is the path to the directory where the output file is saved?
+A: The path to the directory where the output file is saved is:
+
+/home/aru/Desktop/LFX_test/Financial_chatbot/Dataset/Text/
+
+This is specified in the `output_file` variable, which is passed as an argument to the `convert_csv_to_output` function.
+
+Q: What programming language is being used in this script?
+A: The programming language being used in this script is Python.
+
+Q: What library is being imported at the beginning of the script?
+A: The library being imported at the beginning of the script is `csv`.
+
+Q: What is the purpose of the 'next(reader)' line in the code?
+A: The `next(reader)` line in the code is used to skip the first row of the CSV file.
+
+In Python's `csv.reader` object, the `next()` function is used to read and return the next item from an iterator. When called on a reader object, it returns the next row as a list.
+
+By calling `next(reader)` before entering the loop where we process each row, we are effectively skipping the first row of the CSV file. This is likely done because the code assumes that the first row contains header information or some other metadata that should not be included in the output.
+
+In this specific case, it's worth noting that the `next(reader)` line is called immediately after creating the reader object, but before entering the loop where we process each row. This suggests that the intention is to skip the entire first row of the CSV file, rather than just skipping a single header row or column.
+
+Q: What is the format of the data written to the output file?
+A: The format of the data written to the output file is XML-like, but not strictly valid XML. It appears to be a custom format designed for a specific application or system.
+
+Here's a breakdown of the format:
+
+* Each line starts with `<SFT>`, which seems to be a header or delimiter.
+* The next line contains a fixed string: `[INST] <<SYS>>\n You are a financial assistant. Provide detailed, clear, and professional financial insights, and ensure that your responses are easy to understand. \n<</SYS>>\n\n`
+	+ This is likely a template for an instruction or header in the output file.
+* The next line contains two columns of data from the input CSV file: `column_1` and `column_2`.
+	+ These values are enclosed in square brackets (`[]`) and separated by a space.
+* The final line appears to be another delimiter, with a closing tag (`</SFT>`).
+
+Overall, the format is designed for human readability, but it's not a standard or widely-used format. It may be specific to the application or system that will be consuming this output file.
+
+Q: What is the name of the company or organization that developed the financial chatbot?
+A: The context does not provide information about the company or organization that developed the financial chatbot. The code snippet appears to be a Python script used to convert a CSV file into a specific output format, but it does not mention any company or organization name associated with the development of the chatbot.
+
+Q: What is the role of the user interacting with the financial chatbot?
+A: According to the code, the user interacting with the financial chatbot is expected to be a ""financial assistant"". The role of this user is to provide detailed, clear, and professional financial insights in response to questions or prompts. The output file generated by the `convert_csv_to_output` function suggests that the user's responses will be written in a specific format, including:
+
+* A header with instructions on how to respond as a financial assistant
+* A prompt indicating that the user is responding to an instruction (e.g. ""[INST]"")
+* The actual response from the user, which should provide financial insights related to the question or topic being discussed.
+
+Overall, the role of the user interacting with the financial chatbot is to provide expert-level financial advice and guidance in a clear and professional manner."
+"from pathlib import Path
+from typing import List, Optional
+import itertools
+import pdfkit
+from fire import Fire
+from sec_edgar_downloader import Downloader
+
+DEFAULT_OUTPUT_DIR = ""data/""
+DEFAULT_CIKS = [
+    ""0001018724"",  # AMZN
+]
+DEFAULT_FILING_TYPES = [
+    ""10-K"",
+    ""10-Q"",
+]
+
+COMPANY_NAME = ""Your Company Name""
+EMAIL = ""your-email@example.com""
+
+def filing_exists(cik: str, filing_type: str, output_dir: str) -> bool:
+    data_dir = Path(output_dir) / ""sec-edgar-filings""
+    filing_dir = data_dir / cik / filing_type
+    return filing_dir.exists()
+
+def _download_filing(
+    cik: str, filing_type: str, output_dir: str, limit=None, before=None, after=None
+):
+    dl = Downloader(COMPANY_NAME, EMAIL, output_dir)
+    dl.get(filing_type, cik, limit=limit, before=before, after=after, download_details=True)
+
+def _convert_to_pdf(output_dir: str):
+    data_dir = Path(output_dir) / ""sec-edgar-filings""
+
+    for cik_dir in data_dir.iterdir():
+        for filing_type_dir in cik_dir.iterdir():
+            for filing_dir in filing_type_dir.iterdir():
+                filing_doc = filing_dir / ""primary-document.html""
+                filing_pdf = filing_dir / ""primary-document.pdf""
+                if filing_doc.exists() and not filing_pdf.exists():
+                    print(f""- Converting {filing_doc}"")
+                    input_path = str(filing_doc.absolute())
+                    output_path = str(filing_pdf.absolute())
+                    try:
+                        options = {'enable-local-file-access': None}
+                        pdfkit.from_file(input_path, output_path, options=options, verbose=True)
+                        filing_doc.unlink()
+                    except Exception as e:
+                        print(f""Error converting {input_path} to {output_path}: {e}"")
+
+def main(
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+    ciks: List[str] = DEFAULT_CIKS,
+    file_types: List[str] = DEFAULT_FILING_TYPES,
+    before: Optional[str] = None,
+    after: Optional[str] = None,
+    limit: Optional[int] = 3,
+    convert_to_pdf: bool = True,
+):
+    print(f'Downloading filings to ""{Path(output_dir).absolute()}""')
+    print(f""File Types: {file_types}"")
+    
+    if convert_to_pdf:
+        if pdfkit.configuration().wkhtmltopdf is None:
+            raise Exception(
+                ""ERROR: wkhtmltopdf (https://wkhtmltopdf.org/) not found, ""
+                ""please install it to convert html to pdf ""
+                ""`sudo apt-get install wkhtmltopdf`""
+            )
+    
+    for symbol, file_type in itertools.product(ciks, file_types):
+        try:
+            if filing_exists(symbol, file_type, output_dir):
+                print(f""- Filing for {symbol} {file_type} already exists, skipping"")
+            else:
+                print(f""- Downloading filing for {symbol} {file_type}"")
+                _download_filing(symbol, file_type, output_dir, limit, before, after)
+        except Exception as e:
+            print(f""Error downloading filing for symbol={symbol} & file_type={file_type}: {e}"")
+
+    if convert_to_pdf:
+        print(""Converting html files to pdf files and deleting the html files"")
+        _convert_to_pdf(output_dir)
+
+if __name__ == ""__main__"":
+    Fire(main)
+","Summary:
+Here is a comprehensive summary of the text:
+
+**Overview**
+
+The script is designed to download and convert SEC Edgar filings from the US Securities and Exchange Commission (SEC) into PDF format. It uses the `sec_edgar_downloader` library to download the filings and the `pdfkit` library to convert them into PDF.
+
+**Configuration**
+
+The script has several configuration options:
+
+* `output_dir`: The directory where the downloaded filings will be stored.
+* `ciks`: A list of company CIKs (Central Index Key) for which to download filings. Defaults to a list containing Amazon's CIK (""0001018724"").
+* `file_types`: A list of filing types to download. Defaults to a list containing ""10-K"" and ""10-Q"".
+* `before` and `after`: Optional parameters to specify the date range for which to download filings.
+* `limit`: The maximum number of filings to download per company.
+
+**Functions**
+
+The script defines several functions:
+
+* `filing_exists(cik, filing_type, output_dir)`: Checks if a filing exists in the specified directory.
+* `_download_filing(cik, filing_type, output_dir, limit=None, before=None, after=None)`: Downloads a filing using the `sec_edgar_downloader` library.
+* `_convert_to_pdf(output_dir)`: Converts HTML files to PDF format and deletes the original HTML files.
+
+**Main Function**
+
+The main function is responsible for:
+
+1. Downloading filings for each company in the `ciks` list, using the specified `file_types`.
+2. Converting the downloaded HTML files to PDF format.
+3. Deleting the original HTML files.
+
+**Error Handling**
+
+The script includes error handling mechanisms to catch and print any exceptions that occur during the download or conversion process.
+
+**Usage**
+
+To run the script, simply execute it with Python (e.g., `python script.py`). The script will prompt for input if necessary.
+
+Questions and Answers:
+Q: What is the default output directory for downloaded filings?
+A: The default output directory for downloaded filings is ""data/"".
+
+Q: What are the default CIKs used in the script?
+A: The default CIKs used in the script are:
+
+`[""0001018724""]`
+
+This corresponds to Amazon (AMZN).
+
+Q: What are the default filing types used in the script?
+A: The default filing types used in the script are:
+
+1. ""10-K""
+2. ""10-Q""
+
+Q: What is the name of the company being referenced in the script?
+A: The name of the company being referenced in the script is ""Your Company Name"". This is a placeholder and can be replaced with the actual name of the company for which you want to download SEC filings.
+
+Q: What is the email address used to download filings from SEC EDGAR?
+A: The email address used to download filings from SEC EDGAR in the provided code is `your-email@example.com`. This is a placeholder and should be replaced with your actual email address.
+
+Q: Is there a limit on the number of filings that can be downloaded at once?
+A: Yes, there is a limit on the number of filings that can be downloaded at once. In the provided code, you can see that the `_download_filing` function has an optional `limit` parameter.
+
+By default, this parameter is set to `None`, which means there is no explicit limit on the number of filings that can be downloaded. However, if a value is passed for this parameter, it will be used as the maximum number of filings to download at once.
+
+For example, in the `main` function, you can see that the `limit` parameter has an optional default value of `3`. This means that by default, only 3 filings will be downloaded at a time. If you want to change this limit, you can pass a different value for the `limit` parameter when calling the `main` function.
+
+So, in summary, there is no hard-coded limit on the number of filings that can be downloaded at once, but you can set an explicit limit by passing a value for the `limit` parameter.
+
+Q: Can the user specify a date range for which filings should be downloaded?
+A: Yes, the user can specify a date range for which filings should be downloaded. The `main` function in the script has two optional parameters: `before` and `after`. These parameters allow the user to specify a date range for which filings should be downloaded.
+
+Here's an example of how you can use these parameters:
+
+```python
+main(
+    output_dir=""data/"",
+    ciks=[""0001018724""],
+    file_types=[""10-K"", ""10-Q""],
+    before=""2020-01-01"",
+    after=""2019-12-31""
+)
+```
+
+In this example, the script will download filings for the company with CIK `0001018724` that were filed between January 1st, 2020 and December 31st, 2019.
+
+Note: The date range is inclusive of both the start and end dates. If you want to exclude the end date, you can use a date in the past (e.g., ""2022-01-01"") as the `after` parameter.
+
+Also, note that the `before` and `after` parameters are used when calling the `_download_filing` function, which is responsible for downloading the filings. If these parameters are not specified, the script will download all available filings for the specified company and filing type.
+
+Q: Can the user convert HTML files to PDF files after downloading?
+A: Yes, the user can convert HTML files to PDF files after downloading. This is done by setting the `convert_to_pdf` parameter to `True` when calling the `main` function.
+
+Here's an example:
+
+```python
+main(convert_to_pdf=True)
+```
+
+This will enable the conversion of HTML files to PDF files and delete the original HTML files after conversion.
+
+Alternatively, you can also set this as a default behavior by setting the `convert_to_pdf` parameter in the `DEFAULTS` section at the top of the script:
+
+```python
+DEFAULT_CONVERT_TO_PDF = True
+```
+
+And then use it in the `main` function like this:
+
+```python
+def main(
+    output_dir: str = DEFAULT_OUTPUT_DIR,
+    ciks: List[str] = DEFAULT_CIKS,
+    file_types: List[str] = DEFAULT_FILING_TYPES,
+    before: Optional[str] = None,
+    after: Optional[str] = None,
+    limit: Optional[int] = 3,
+    convert_to_pdf: bool = DEFAULT_CONVERT_TO_PDF,
+):
+```
+
+This way, the conversion to PDF will be enabled by default when calling the `main` function."
+"from openai import OpenAI
+
+client = OpenAI(api_key=""your_openai_api_key_here"")
+
+def read_text_file(file_path):
+    with open(file_path, 'r') as file:
+        return file.read()
+
+def generate_summary(text, model=""gpt-4o-mini"", max_tokens=150):
+    completion = client.chat.completions.create(
+        model=model,
+        messages=[
+            {""role"": ""system"", ""content"": ""You are an expert in analysing 10-Q reports and summarizes the content of those reports.""},
+            {""role"": ""user"", ""content"": text},
+        ]
+    )
+    
+    summary = completion.choices[0].message['content'].strip()
+    return summary
+
+
+def main(file_path):
+    text = read_text_file(file_path)
+    summary = generate_summary(text)
+    print(""Summary:"")
+    print(summary)
+
+if __name__ == ""__main__"":
+    input_file_path = ""your_text_file.txt"" 
+    main(input_file_path)
+
+","Summary:
+**Summary of the Code**
+
+The provided code is a Python script that uses the OpenAI API to generate a summary of a text file. Here's a breakdown of how it works:
+
+1. **Importing the OpenAI Library**: The script starts by importing the `OpenAI` library, which allows interaction with the OpenAI API.
+2. **Defining Functions**:
+	* `read_text_file(file_path)`: This function reads the contents of a text file located at the specified `file_path`.
+	* `generate_summary(text, model=""gpt-4o-mini"", max_tokens=150)`: This function uses the OpenAI API to generate a summary of the input `text`. It takes an optional `model` parameter (defaulting to ""gpt-4o-mini"") and a `max_tokens` parameter (defaulting to 150).
+	* `main(file_path)`: This is the main entry point of the script, which calls the above functions to read a text file and generate a summary.
+3. **Using the OpenAI API**: The `generate_summary` function uses the OpenAI API's `chat.completions.create` method to generate a summary of the input text. It sends a message with the role ""system"" to set up the context, followed by a message with the role ""user"" containing the input text.
+4. **Printing the Summary**: The `main` function prints the generated summary to the console.
+
+**Notes**
+
+* The script assumes that you have an OpenAI API key and have replaced `""your_openai_api_key_here""` with your actual API key.
+* You should replace `""your_text_file.txt""` with the path to the text file you want to summarize.
+* The `model` parameter in the `generate_summary` function can be changed to use a different OpenAI model, such as ""gpt-3.5-turbo"" or ""text-davinci-003"".
+* The `max_tokens` parameter controls the maximum number of tokens (characters) in the generated summary.
+
+Questions and Answers:
+Q: What is the name of the library used to interact with OpenAI?
+A: The library used to interact with OpenAI in the provided code is `openai`.
+
+Q: What is the purpose of the read_text_file function?
+A: The `read_text_file` function is used to read the contents of a text file located at the specified `file_path`. It opens the file in read mode (`'r'`) and returns the entire content of the file as a string.
+
+In the context of the provided code, this function is called by the `main` function with a specific file path (`input_file_path`). The contents of the text file are then passed to the `generate_summary` function for further processing.
+
+Q: What is the default model used for generating summaries?
+A: The default model used for generating summaries in the provided code is ""gpt-4o-mini"".
+
+Q: How many tokens can be generated in a single summary?
+A: According to the code, a single summary can have up to 150 tokens. This is specified in the `generate_summary` function where `max_tokens=150`.
+
+Q: What is the role of the system message in the chat completion request?
+A: In the provided code, the system message plays a crucial role in defining the context and expertise of the chat model. The system message is sent as part of the `messages` list in the `chat.completions.create()` method.
+
+The specific system message used here is:
+```python
+{""role"": ""system"", ""content"": ""You are an expert in analysing 10-Q reports and summarizes the content of those reports.""}
+```
+This message serves several purposes:
+
+1. **Contextualization**: It sets the context for the chat model, indicating that it should analyze a 10-Q report (a type of financial document) and summarize its content.
+2. **Expertise declaration**: By stating ""You are an expert in analysing 10-Q reports,"" the system message informs the chat model about its own expertise, which helps the model to generate more accurate and relevant responses.
+3. **Task specification**: The message clearly specifies the task at hand: summarizing the content of a 10-Q report.
+
+By including this system message, the code is effectively ""priming"" the chat model with the necessary context and expertise to generate a high-quality summary of the input text (the 10-Q report).
+
+Q: What is the content of the user message in the chat completion request?
+A: The content of the user message in the chat completion request is the text read from the file specified by `file_path` in the `main` function. This text is passed to the `generate_summary` function as an argument named `text`.
+
+Q: What is the name of the API client class used to interact with OpenAI?
+A: The name of the API client class used to interact with OpenAI is `OpenAI`.
+
+Q: What is the path to the input file read by the main function?
+A: The path to the input file read by the `main` function is specified in the line:
+
+```python
+input_file_path = ""your_text_file.txt""
+```
+
+However, this path is hardcoded and should be replaced with the actual path to your text file. If you want to make it dynamic, you could modify the code to accept the file path as a command-line argument or prompt the user for it.
+
+For example:
+
+```python
+import argparse
+
+parser = argparse.ArgumentParser(description='Generate summary from 10-Q report')
+parser.add_argument('file_path', help='Path to the input text file')
+
+args = parser.parse_args()
+
+if __name__ == ""__main__"":
+    main(args.file_path)
+```
+
+This way, you can run the script with a specific file path as an argument:
+
+```bash
+python your_script.py /path/to/your/text/file.txt
+```
+
+Q: What is the default content of the system message in the chat completion request?
+A: The default content of the system message in the chat completion request is ""You are an expert in analysing 10-Q reports and summarizes the content of those reports.""
+
+Q: What is the maximum number of tokens that can be generated in a single summary?
+A: According to the code, the maximum number of tokens that can be generated in a single summary is 150. This is specified by the `max_tokens` parameter in the `generate_summary` function, which is set to 150."
+"import csv
+import logging
+import time
+from github import Github
+from urllib.parse import urlparse
+import openai
+
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def summarize_text(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert in summarizing and understanding various types of code and documentation. Summarize the given text in a concise and coherent manner."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f""Error in summarizing text: {e}"")
+        return ""Error: Could not summarize""
+
+def get_repo_issues(repo_url):
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip('/').split('/')
+    owner, repo_name = path_parts[0], path_parts[1]
+
+    # Initialize GitHub client
+    g = Github() 
+
+    # Get the repository
+    repo = g.get_repo(f""{owner}/{repo_name}"")
+
+    # Get all issues
+    issues = repo.get_issues(state=""all"")
+    issue_list = []
+    for issue in issues:
+        issue_list.append({
+            ""title"": issue.title,
+            ""body"": issue.body
+        })
+
+    return issue_list
+
+def process_issues(repo_url, output_csv_file):
+    try:
+        issues = get_repo_issues(repo_url)
+        
+        with open(output_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([""Issue Title"", ""Summary""])  
+            
+            for issue in issues:
+                title = issue[""title""]
+                body = issue[""body""]
+                logging.info(f""Processing issue: {title}"")
+                
+                # Summarize the issue body
+                summary = summarize_text(body)
+                writer.writerow([title, summary])
+                
+                logging.info(f""Summary for issue '{title}' added to CSV."")
+
+    except Exception as e:
+        logging.error(f""Error processing issues: {e}"")
+
+if __name__ == ""__main__"":
+    repo_url = input(""Enter the GitHub repository URL: "")
+    output_csv_file = ""repo_issues_summaries.csv""
+
+    process_issues(repo_url, output_csv_file)
+    print(f""Issue summaries have been saved to {output_csv_file}"")
+","Summary:
+Here is a comprehensive summary of the provided code:
+
+**Overview**
+
+The code is designed to extract and summarize issues from a GitHub repository. It uses the OpenAI API for text summarization and the GitHub API to retrieve issues.
+
+**Imported Libraries**
+
+The code imports the following libraries:
+
+* `csv` for working with CSV files
+* `logging` for logging purposes
+* `time` for measuring execution time
+* `github` for interacting with the GitHub API
+* `urllib.parse` for parsing URLs
+* `openai` for using the OpenAI API
+
+**Configuration**
+
+The code sets up some configuration variables:
+
+* `API_BASE_URL`: the base URL of the OpenAI API
+* `MODEL_NAME`: the name of the OpenAI model to use (in this case, ""llama"")
+* `API_KEY`: the API key for the OpenAI API (in this case, a placeholder value)
+
+**Functions**
+
+The code defines three functions:
+
+1. **`summarize_text(text)`**: takes a text input and uses the OpenAI API to summarize it. It returns the summarized text.
+2. **`get_repo_issues(repo_url)`**: takes a GitHub repository URL and retrieves all issues from that repository using the GitHub API. It returns a list of issue dictionaries, each containing the title and body of an issue.
+3. **`process_issues(repo_url, output_csv_file)`**: takes a GitHub repository URL and an output CSV file path as input. It uses the `get_repo_issues()` function to retrieve issues from the repository, summarizes each issue using the `summarize_text()` function, and writes the summarized text to the output CSV file.
+
+**Main Program**
+
+The code defines a main program that:
+
+1. Asks the user for a GitHub repository URL
+2. Calls the `process_issues()` function with the input URL and an output CSV file path (in this case, ""repo_issues_summaries.csv"")
+3. Prints a message indicating that issue summaries have been saved to the output CSV file
+
+**Error Handling**
+
+The code includes error handling mechanisms in each of the three functions:
+
+* If an exception occurs during text summarization, it logs an error message and returns an error string.
+* If an exception occurs while retrieving issues from the repository or processing them, it logs an error message.
+
+Questions and Answers:
+Q: What is the base URL for the API?
+A: The base URL for the API is ""https://llama.us.gaianet.network/v1"".
+
+Q: What is the name of the AI model used in this script?
+A: The AI model used in this script is named ""llama"". It is specified as the `MODEL_NAME` variable at the top of the script.
+
+Q: What is the API key used to authenticate with the API?
+A: The API key used to authenticate with the API is `API_KEY = ""GAIA""`. This key is hardcoded in the script and is not explicitly mentioned as a secret or sensitive information. However, it's worth noting that using a hardcoded API key in production code is generally considered insecure and should be avoided. A more secure approach would be to store the API key securely, such as in an environment variable or a secrets manager.
+
+Q: What library is used to interact with GitHub?
+A: The library used to interact with GitHub in the provided code is `github`.
+
+Q: What library is used to parse URLs?
+A: The `urllib.parse` library is used to parse URLs in the provided code. Specifically, it's used in the `get_repo_issues(repo_url)` function with the following line:
+
+```python
+parsed_url = urlparse(repo_url)
+```
+
+This function breaks down the URL into its components (scheme, netloc, path, params, query, fragment) which can then be accessed and manipulated as needed.
+
+Q: What library is used to handle logging?
+A: The library used to handle logging in the provided code is `logging`. Specifically, it is being used with the following line of code:
+
+```python
+logging.basicConfig(level=logging.INFO)
+```
+
+This sets up a basic configuration for the logger, which includes setting the log level to `INFO` and other default settings.
+
+Q: What library is used to create a CSV file?
+A: The `csv` library is used to create a CSV file in the provided code. Specifically, it is imported at the beginning of the script with the line:
+
+```python
+import csv
+```
+
+This library provides functions for reading and writing tabular data in CSV format. In this case, it is used to write issue summaries to a CSV file named ""repo_issues_summaries.csv"" in the `process_issues` function.
+
+Q: What is the default level for logging messages?
+A: The default level for logging messages in the provided code is `INFO`. This can be seen from the line:
+
+`logging.basicConfig(level=logging.INFO)`
+
+This sets the basic configuration for the logger, including the level at which messages are logged. In this case, it's set to `INFO`, which means that any message with a level of `INFO` or higher (i.e., `WARNING`, `ERROR`, and `CRITICAL`) will be logged.
+
+Q: What is the name of the output CSV file?
+A: The name of the output CSV file is ""repo_issues_summaries.csv""."
+"import os
+import csv
+import requests
+import logging
+import time
+from github import Github
+from urllib.parse import urlparse
+import openai
+
+logging.basicConfig(level=logging.INFO)
+
+API_BASE_URL = ""https://llama.us.gaianet.network/v1""
+MODEL_NAME = ""llama""
+API_KEY = ""GAIA""
+
+client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+def summarize_text(text):
+    try:
+        start_time = time.time()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    ""role"": ""system"",
+                    ""content"": ""You are an expert in summarizing and understanding various types of code and documentation. Summarize the given text in a concise and coherent manner."",
+                },
+                {
+                    ""role"": ""user"",
+                    ""content"": text,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        logging.info(f""API call took {time.time() - start_time} seconds."")
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f""Error in summarizing text: {e}"")
+        return ""Error: Could not summarize""
+
+def get_repo_files(repo_url):
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip('/').split('/')
+    owner, repo_name = path_parts[0], path_parts[1]
+
+    # Initialize GitHub client
+    g = Github() 
+
+    # Get the repository
+    repo = g.get_repo(f""{owner}/{repo_name}"")
+
+    # Get all files in the repository
+    files = []
+    contents = repo.get_contents("""")
+    while contents:
+        file_content = contents.pop(0)
+        if file_content.type == ""dir"":
+            contents.extend(repo.get_contents(file_content.path))
+        else:
+            files.append(file_content.path)
+
+    return files
+
+def fetch_file_content(repo_url, file_path):
+    # Extract owner and repo name from the URL
+    parsed_url = urlparse(repo_url)
+    path_parts = parsed_url.path.strip('/').split('/')
+    owner, repo_name = path_parts[0], path_parts[1]
+
+    # Initialize GitHub client
+    g = Github() 
+
+    # Get the repository
+    repo = g.get_repo(f""{owner}/{repo_name}"")
+
+    # Get file content
+    file_content = repo.get_contents(file_path).decoded_content.decode()
+    return file_content
+
+def process_files(repo_url, output_csv_file):
+    try:
+        file_paths = get_repo_files(repo_url)
+        
+        with open(output_csv_file, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([""File Path"", ""Summary""])  
+            
+            for path in file_paths:
+                logging.info(f""Processing file: {path}"")
+                file_content = fetch_file_content(repo_url, path)
+                
+                summary = summarize_text(file_content)
+                writer.writerow([path, summary])
+                
+                logging.info(f""Summary for {path} added to CSV."")
+
+    except Exception as e:
+        logging.error(f""Error processing files: {e}"")
+
+if __name__ == ""__main__"":
+    repo_url = input(""Enter the GitHub repository URL: "")
+    output_csv_file = ""repo_file_summaries.csv""
+
+    process_files(repo_url, output_csv_file)
+    print(f""File summaries have been saved to {output_csv_file}"")
+","Summary:
+Here is a comprehensive summary of the provided code:
+
+**Overview**
+
+The code is designed to summarize files in a GitHub repository using the LLaMA AI model. It takes a GitHub repository URL as input, fetches all file contents, and generates summaries for each file using the LLaMA model.
+
+**Imported Libraries**
+
+The code imports the following libraries:
+
+* `os`: for interacting with the operating system
+* `csv`: for working with CSV files
+* `requests`: not used in this code snippet
+* `logging`: for logging messages
+* `time`: for measuring execution time
+* `github`: for interacting with GitHub APIs
+* `openai`: for using the LLaMA AI model
+
+**Constants and Variables**
+
+The code defines several constants and variables:
+
+* `API_BASE_URL`: the base URL of the LLaMA API
+* `MODEL_NAME`: the name of the LLaMA model to use
+* `API_KEY`: the API key for accessing the LLaMA API
+* `client`: an instance of the OpenAI client
+
+**Functions**
+
+The code defines several functions:
+
+* `summarize_text(text)`: takes a text string as input and returns a summary generated by the LLaMA model
+* `get_repo_files(repo_url)`: takes a GitHub repository URL as input and returns a list of file paths in the repository
+* `fetch_file_content(repo_url, file_path)`: takes a GitHub repository URL and a file path as input and returns the contents of the file
+* `process_files(repo_url, output_csv_file)`: takes a GitHub repository URL and an output CSV file name as input and generates summaries for all files in the repository
+
+**Main Program**
+
+The code defines a main program that:
+
+1. Asks the user to enter a GitHub repository URL
+2. Calls the `process_files` function with the entered URL and a default output CSV file name
+3. Prints a message indicating that the file summaries have been saved to the output CSV file
+
+**Error Handling**
+
+The code includes error handling mechanisms to catch and log any exceptions that may occur during execution.
+
+Questions and Answers:
+Q: What is the base URL for the API?
+A: The base URL for the API is `https://llama.us.gaianet.network/v1`.
+
+Q: What is the name of the AI model used in the code?
+A: The AI model used in the code is named ""llama"". It is specified as `MODEL_NAME = ""llama""` at the top of the script.
+
+Q: What is the API key used to authenticate with the API?
+A: The API key used to authenticate with the API is `API_KEY = ""GAIA""`. This key is hardcoded in the script and is not a secret or secure way of storing an API key. In a real-world application, it's recommended to store sensitive information like API keys securely using environment variables or a secrets manager.
+
+Q: What library is used to interact with GitHub?
+A: The `github` library is used to interact with GitHub in the provided code. Specifically, it's being used to:
+
+1. Initialize a GitHub client: `g = Github()`
+2. Get a repository object from the client: `repo = g.get_repo(f""{owner}/{repo_name}"")`
+3. Retrieve file contents and metadata from the repository: `file_content = repo.get_contents(file_path).decoded_content.decode()`
+
+Q: What library is used to make HTTP requests?
+A: The `requests` library is used to make HTTP requests in the provided code.
+
+Q: What library is used to parse URLs?
+A: The `urllib.parse` library is used to parse URLs in the provided code. Specifically, it's used in the following lines:
+
+```python
+parsed_url = urlparse(repo_url)
+```
+
+and
+
+```python
+path_parts = parsed_url.path.strip('/').split('/')
+```
+
+This library provides functions for breaking down URLs into their components (scheme, netloc, path, params, query, fragment) and vice versa.
+
+Q: What library is used to handle logging?
+A: The library used to handle logging in the provided code is `logging`.
+
+Q: What library is used to interact with OpenAI's API?
+A: The library used to interact with OpenAI's API in the provided code is `openai`.
+
+Q: What function is responsible for summarizing text using the AI model?
+A: The function responsible for summarizing text using the AI model is `summarize_text(text)`. This function uses the OpenAI API to generate a summary of the input text based on the provided model and parameters.
+
+Q: What function is responsible for fetching file content from a repository on GitHub?
+A: The function responsible for fetching file content from a repository on GitHub is `fetch_file_content(repo_url, file_path)`. This function takes two parameters: the URL of the GitHub repository and the path to the specific file within that repository. It uses the `Github` library to interact with the GitHub API and retrieve the contents of the specified file."
