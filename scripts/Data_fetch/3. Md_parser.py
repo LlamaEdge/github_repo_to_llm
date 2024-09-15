@@ -16,7 +16,7 @@ def get_github_contents(repo_url):
     }
     
     response = requests.get(api_url, headers=headers)
-    response.raise_for_status()  # Will raise HTTPError if the status code is 4xx, 5xx
+    response.raise_for_status() 
     
     return response.json()
 
@@ -55,5 +55,5 @@ if __name__ == "__main__":
     repo_url = input("Enter GitHub repository URL: ")
     contents = get_github_contents(repo_url)
     paths = process_contents(contents)
-    write_to_csv(paths, "wasmedge_md.csv")
+    write_to_csv(paths, "eth_md.csv")
     print("CSV file 'markdown_files.csv' generated successfully.")
