@@ -7,6 +7,7 @@ API_BASE_URL = "https://llama.us.gaianet.network/v1"
 MODEL_NAME = "llama"
 API_KEY = "GAIA"
 
+
 def summarize(source_text):
     client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
@@ -66,18 +67,20 @@ def agen(source_text, question):
 
 def main():
     results = []
-    input_path = "" # Add path to input file containing Content
-    output_path = "" # Add path to output file containing Content and Summary
+    input_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/eth_md.csv" 
+    output_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/eth_md_summary.csv" 
 
     with open(input_path, 'r', newline='', encoding='utf-8') as csvfile:
         csv_reader = csv.DictReader(csvfile) 
+        row_count = sum(1 for row in csv_reader)
+        csvfile.seek(0) 
+        csv_reader = csv.DictReader(csvfile)
+        count = 0
         for row in csv_reader:
-            main_content = row['Content'] 
+            main_content = row['content'] 
 
-            # Summarize the content
             summary = summarize(main_content)
 
-            # Generate questions based on the content
             qs = qgen(main_content)
             qna_list = []
             for q in qs.splitlines():
@@ -88,6 +91,9 @@ def main():
                 
             summary_and_qna = f"Summary:\n{summary}\n\nQuestions and Answers:\n" + "\n\n".join(qna_list)
             results.append([main_content, summary_and_qna])
+
+            count += 1
+            print(f"Processed {count}/{row_count} rows")
 
     with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)

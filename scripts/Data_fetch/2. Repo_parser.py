@@ -8,23 +8,23 @@ def get_github_contents(repo_url):
     parts = repo_url.rstrip('/').split('/')
     user = parts[-2]
     repo = parts[-1]
-    
+
     api_url = f"https://api.github.com/repos/{user}/{repo}/contents/"
-    
+
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}"
     }
-    
+
     response = requests.get(api_url, headers=headers)
-    response.raise_for_status() 
-    
+    response.raise_for_status()
+
     return response.json()
 
 def process_contents(contents, paths=[], parent_path=""):
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}"
     }
-    
+
     for item in contents:
         path = parent_path + item['name']
         if item['type'] == 'dir':
@@ -37,14 +37,14 @@ def process_contents(contents, paths=[], parent_path=""):
             file_response.raise_for_status()
             file_content = file_response.text
             paths.append({"Path": path, "Content": file_content})
-    
+
     return paths
 
 def write_to_csv(data, output_file):
     with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
         fieldnames = ['Path', 'Content']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
+
         writer.writeheader()
         for row in data:
             writer.writerow(row)

@@ -4,7 +4,7 @@ import os
 
 API_BASE_URL = "https://llama.us.gaianet.network/v1"
 MODEL_NAME = "llama"
-API_KEY = "GAIA"
+API_KEY = "not_now"
 
 def summarize(source_text):
     client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
@@ -61,21 +61,37 @@ def agen(source_text, question):
     return chat_completion.choices[0].message.content
 
 def main():
-    input_path = "C:\\Users\\91745\\OneDrive\\Desktop\\Github_analyser\\Output\\repo_Codes.csv"
-    output_path = "C:\\Users\\91745\\OneDrive\\Desktop\\Github_analyser\\Output\\repo_codes_split.csv"
+    input_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_all.csv"
+    output_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_all_split.csv"
 
+    processed_contents = set()
+    output_file_exists = os.path.exists(output_path)
+    if output_file_exists:
+        with open(output_path, 'r', newline='', encoding='utf-8') as csvfile:
+            csv_reader = csv.DictReader(csvfile)
+            for row in csv_reader:
+                processed_contents.add(row['Content'])
+    else:
+        pass
 
-    results = []
+    row_count = 0
 
-    with open(input_path, 'r', newline='', encoding='utf-8') as csvfile:
-        csv_reader = csv.DictReader(csvfile)  # Use DictReader to access columns by name
+    with open(input_path, 'r', newline='', encoding='utf-8') as csvfile_in, \
+         open(output_path, 'a', newline='', encoding='utf-8') as csvfile_out:
+
+        csv_reader = csv.DictReader(csvfile_in)
+        fieldnames = ["Content", "Summary and Q&A"]
+        writer = csv.DictWriter(csvfile_out, fieldnames=fieldnames)
+
+        if not output_file_exists:
+            writer.writeheader()
+
         for row in csv_reader:
-            main_content = row['Content']  # Use 'Content' column
+            main_content = row['Content']
 
-            # Summarize the content
+            if main_content in processed_contents:
+                continue  
             summary = summarize(main_content)
-
-            # Generate questions based on the content
             qs = qgen(main_content)
             qna_list = []
             for q in qs.splitlines():
@@ -84,18 +100,16 @@ def main():
                 answer = agen(main_content, q)
                 qna_list.append(f"Q: {q}\nA: {answer}")
 
-            # Combine summary and QnA into multiple rows
-            results.append([main_content, f"Summary:\n{summary}"])  # First row with summary
+            writer.writerow({"Content": main_content, "Summary and Q&A": f"Summary:\n{summary}"})
             for qna in qna_list:
-                results.append([main_content, qna])  # Multiple rows for each question-answer
+                writer.writerow({"Content": main_content, "Summary and Q&A": qna})
+            processed_contents.add(main_content)
 
-    # Write results to the output CSV file
-    with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["Content", "Summary and Q&A"])  # Header row
-        writer.writerows(results)
+            row_count += 1
+            print(f"Processed row {row_count}")
 
     print(f"Modified data has been written to {output_path}")
+    print(f"Total rows summarized: {row_count}")
 
 if __name__ == "__main__":
     main()
