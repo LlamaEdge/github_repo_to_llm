@@ -2,8 +2,8 @@ import openai
 import csv
 import os
 
-API_BASE_URL = "https://llama.us.gaianet.network/v1"
-MODEL_NAME = "llama"
+API_BASE_URL = "https://gemma.us.gaianet.network/v1"
+MODEL_NAME = "gemma"
 API_KEY = "not_now"
 
 def summarize(source_text):
@@ -62,7 +62,7 @@ def agen(source_text, question):
 
 def main():
     input_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_all.csv"
-    output_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_all_split.csv"
+    output_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_all_split_2.csv"
 
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
