@@ -1,9 +1,11 @@
-import pandas as pd
 import openai
+import csv
+import sys
+import os
 import logging
-import time
 
-logging.basicConfig(level=logging.ERROR)
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 API_BASE_URL = "https://llama.us.gaianet.network/v1"
 MODEL_NAME = "llama"
@@ -11,49 +13,109 @@ API_KEY = "GAIA"
 
 client = openai.OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
-def generate_qna(text, summary):
+def qgen(source_text):
     try:
-        start_time = time.time()
-        combined_text = f"Content: {text}\n\nSummary: {summary}"
-        
-        response = client.chat.completions.create(
+        chat_completion = client.chat.completions.create(
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert in analysing code related files. Your task is to understand and review the code present in the Content column csv file and the Summary column of the file as well. Based on your understanding of the files, you have to generate 5 to 10 questions and answers for each row of the csv you go through. These questions should provide an overall understanding of the file related to it's execution, usage, potential issues, errors and how can the code be improved. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as \"this team\" or \"that lab\". Each question must be on its own line. Just list the questions without any introductory text or numbers."
+                    "content": "Respond with a list of 10 questions. The text in the user message must contain specific answers to each question. Each question must be complete without references to unclear context such as 'this team' or 'that lab'. Each question must be on its own line. Just list the questions without any introductory text or numbers.",
                 },
                 {
                     "role": "user",
-                    "content": combined_text,
+                    "content": source_text,
                 }
             ],
             model=MODEL_NAME,
             stream=False,
         )
-        
-        raw_content = response.choices[0].message.content.strip()
-
-        # Capture QnA pairs
-        return raw_content
+        return chat_completion.choices[0].message.content
     except Exception as e:
-        logging.error(f"Error in generating Q&A: {e}")
-        return "Error: Could not generate Q&A"
+        logging.error(f"Error in generating questions: {e}")
+        return None
 
-def generate_qna_csv(input_csv_file, output_csv_file):
+def agen(source_text, question):
     try:
-        df = pd.read_csv(input_csv_file)
-        
-        if 'Content' not in df.columns or 'Summary' not in df.columns:
-            raise ValueError("'Content' or 'Summary' column not found in the input CSV file.")
-        
-        df['QnA'] = df.apply(lambda row: generate_qna(row['Content'], row['Summary']) if pd.notnull(row['Content']) else "", axis=1)
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Give a comprehensive and well-reasoned answer to the user question strictly based on the context below.\n" + source_text,
+                },
+                {
+                    "role": "user",
+                    "content": question,
+                }
+            ],
+            model=MODEL_NAME,
+            stream=False,
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        logging.error(f"Error in generating answer: {e}")
+        return None
 
-        # Save the new DataFrame with the QnA column
-        df.to_csv(output_csv_file, index=False)
+def process_csv(input_csv, output_csv):
+    results = []
+    processed_contents = set()
+
+    if os.path.exists(output_csv):
+        with open(output_csv, 'r', newline='', encoding='utf-8') as outfile:
+            reader = csv.reader(outfile)
+            for row in reader:
+                processed_contents.add(row[0]) 
+
+    try:
+        with open(input_csv, 'r', newline='', encoding='utf-8') as csvfile_in, \
+             open(output_csv, 'a', newline='', encoding='utf-8') as csvfile_out:
+
+            csv_reader = csv.DictReader(csvfile_in)
+            fieldnames = ['Content', 'Summary and Q&A']
+            writer = csv.DictWriter(csvfile_out, fieldnames=fieldnames)
+
+            if not os.path.exists(output_csv) or os.stat(output_csv).st_size == 0:
+                writer.writeheader()  
+
+            for row in csv_reader:
+                main_content = row['Content']
+                summary = row['Summary']
+
+                if main_content in processed_contents:
+                    logging.info(f"Skipping already processed content: {main_content}")
+                    continue
+
+                questions = qgen(main_content)
+                if questions is None:
+                    logging.error(f"Skipping content due to question generation failure: {main_content}")
+                    continue
+
+                question_list = questions.splitlines()
+                result = [{"Content": main_content, "Summary and Q&A": f"Summary:\n{summary}"}]
+                
+                for question in question_list:
+                    if len(question.strip()) == 0:
+                        continue
+                    answer = agen(main_content, question)
+                    if answer is None:
+                        logging.error(f"Skipping question due to answer generation failure: {question}")
+                        continue
+                    result.append({"Content": main_content, "Summary and Q&A": f"Q: {question}\nA: {answer}"})
+
+                for res in result:
+                    writer.writerow(res)
+                    csvfile_out.flush() 
+
+                logging.info(f"Processed and saved content: {main_content}")
+
     except Exception as e:
         logging.error(f"Error processing CSV: {e}")
 
 if __name__ == "__main__":
-    input_csv_file = ""  #Replace with your content and summary CSV file path
-    output_csv_file = ""  #Replace with your summary+Qna CSV file path
-    generate_qna_csv(input_csv_file, output_csv_file)
+    if len(sys.argv) != 3:
+        logging.error("Usage: python script.py <input_csv> <output_csv>")
+        sys.exit(1)
+
+    input_csv_file = sys.argv[1]
+    output_csv_file = sys.argv[2]
+
+    process_csv(input_csv_file, output_csv_file)

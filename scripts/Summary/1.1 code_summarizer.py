@@ -38,11 +38,11 @@ def summarize_code(code, path):
 def summarize_csv_content(input_csv_file, output_csv_file):
     try:
         df = pd.read_csv(input_csv_file)
-        if 'content' not in df.columns or 'path' not in df.columns:
+        if 'Content' not in df.columns or 'Path' not in df.columns:
             raise ValueError("'Content' or 'Path' column not found in the input CSV file.")
 
         logging.info("Starting summarization...")
-        df['summary'] = df.apply(lambda row: summarize_code(row['content'], row['path']) if pd.notnull(row['content']) else "", axis=1)
+        df['Summary'] = df.apply(lambda row: summarize_code(row['Content'], row['Path']) if pd.notnull(row['Content']) else "", axis=1)
 
         df.to_csv(output_csv_file, index=False)
         logging.info(f"Summaries have been generated and saved to {output_csv_file}")
@@ -50,7 +50,7 @@ def summarize_csv_content(input_csv_file, output_csv_file):
         logging.error(f"Error processing CSV: {e}")
 
 if __name__ == "__main__":
-    input_csv_file = 'Output//repo_Codes.csv'  
-    output_csv_file = 'Output//.csv' 
+    input_csv_file = '/home/aru/Desktop/Github_analyser/Output/main_repos/llamaedge_all.csv'  
+    output_csv_file = 'output_llamaedge.csv' 
 
     summarize_csv_content(input_csv_file, output_csv_file)
