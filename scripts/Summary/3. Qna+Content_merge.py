@@ -1,14 +1,12 @@
 import csv
 
 def merge_content_summary_qna(content_csv, summary_qna_csv, output_csv):
-    # Read content CSV containing Path and Content
     content_rows = []
     with open(content_csv, 'r', newline='', encoding='utf-8') as csvfile:
         csv_reader = csv.DictReader(csvfile)
         for row in csv_reader:
             content_rows.append(row['Content'])
 
-    # Read summary and QnA CSV
     summary_qna_rows = []
     with open(summary_qna_csv, 'r', newline='', encoding='utf-8') as csvfile:
         csv_reader = csv.DictReader(csvfile)

@@ -50,7 +50,7 @@ def summarize_csv_content(input_csv_file, output_csv_file):
         logging.error(f"Error processing CSV: {e}")
 
 if __name__ == "__main__":
-    input_csv_file = '/home/aru/Desktop/Github_analyser/Output/main_repos/llamaedge_all.csv'  
-    output_csv_file = 'output_llamaedge.csv' 
+    input_csv_file = '/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_shorten.csv'  
+    output_csv_file = '/home/aru/Desktop/Github_analyser/Output/summary/wasmedge_summary.csv' 
 
     summarize_csv_content(input_csv_file, output_csv_file)
