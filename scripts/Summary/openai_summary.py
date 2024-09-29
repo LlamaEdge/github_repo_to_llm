@@ -1,13 +1,8 @@
 import csv
 import os
 from openai import OpenAI
-client = OpenAI(
-      api_key=os.environ['sk-proj-']
-)
-
-client = OpenAI()
-
-MODEL_NAME = "gpt-4-turbo"
+client = OpenAI(api_key='')
+MODEL_NAME = "gpt-4o"
 
 def summarize(source_text):
     chat_completion = client.chat.completions.create(model=MODEL_NAME,
@@ -56,9 +51,8 @@ def agen(source_text, question):
     return chat_completion.choices[0].message.content
 
 def main():
-    input_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/llamaedge_all.csv"
-    output_path = "/home/aru/Desktop/Github_analyser/Output/split_summary/llamaedge_all_split.csv"
-
+    input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\main_repos\gaianet_md_2.csv"
+    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\split_summary\gaianet_split.csv"
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
     if output_file_exists:
