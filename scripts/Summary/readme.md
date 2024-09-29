@@ -6,4 +6,4 @@
 
 4. final_split_summary.py also does the similar function but it uses gaianet endpoints instead of openai api.
 
-The key difference between the above 2 files is the use of APIs from open source models and proprietary models
+The key difference between the above 2 files is the use of APIs from open source models and proprietary models.
