@@ -1,5 +1,6 @@
 import csv
 import os
+import openai
 from openai import OpenAI
 client = OpenAI(api_key='')
 MODEL_NAME = "gpt-4o"
@@ -55,6 +56,7 @@ def main():
     output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\split_summary\gaianet_split.csv"
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
+
     if output_file_exists:
         with open(output_path, 'r', newline='', encoding='utf-8') as csvfile:
             csv_reader = csv.DictReader(csvfile)
@@ -78,20 +80,20 @@ def main():
 
             if main_content in processed_contents:
                 continue
+
             summary = summarize(main_content)
             qs = qgen(main_content)
-            qna_list = []
+
+            if summary.strip():
+                writer.writerow({"Content": main_content, "Summary and Q&A": f"Summary:\n{summary}"})
+
             for q in qs.strip().split('\n'):
-                if not q.strip():
-                    continue
-                answer = agen(main_content, q)
-                qna_list.append(f"Q: {q}\nA: {answer}")
+                if q.strip():
+                    answer = agen(main_content, q)
+                    if answer.strip():
+                        writer.writerow({"Content": main_content, "Summary and Q&A": f"Q: {q}\nA: {answer}"})
 
-            writer.writerow({"Content": main_content, "Summary and Q&A": f"Summary:\n{summary}"})
-            for qna in qna_list:
-                writer.writerow({"Content": main_content, "Summary and Q&A": qna})
             processed_contents.add(main_content)
-
             row_count += 1
             print(f"Processed row {row_count}")
 
