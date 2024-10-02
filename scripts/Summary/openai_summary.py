@@ -10,7 +10,19 @@ def summarize(source_text):
     messages=[
         {
             "role": "system",
-            "content": "Respond with a comprehensive summary of the text or the code provided in the user message",
+            "content": """
+            You are an AI assistant designed to review pull requests (PRs) in GitHub repositories. Your task is to:
+
+            1. Summarize Code-related Files:
+             - Focus on key changes in the code, including additions, deletions, and modifications.
+             - Capture essential details such as the purpose of the code, any new functions, classes, or methods, and the overall impact of these changes on the project.
+             - Highlight any dependencies, error handling, or performance implications.
+
+            2. Summarize Markdown Files:
+            - Extract key points from documentation, readme files, and other markdown content.
+            - Identify sections related to project setup, usage instructions, change logs, or contributor guidelines.
+            - Note updates in the documentation and the implications for users or developers.
+""",
         },
         {
             "role": "user",
@@ -53,7 +65,7 @@ def agen(source_text, question):
 
 def main():
     input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\main_repos\gaianet_md_2.csv"
-    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\split_summary\gaianet_split.csv"
+    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\split_summary\gaianet_md_open_new.csv"
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
 
