@@ -72,9 +72,8 @@ def agen(source_text, question):
     return chat_completion.choices[0].message.content
 
 def main():
-    input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\main_repos\gaianet_md_2.csv"
-    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\split_summary\gaianet_md_llama.csv"
-
+    input_path = "/home/aru/Desktop/Github_analyser/Output/main_repos/5.quickjs_all.csv"
+    output_path = "/home/aru/Desktop/Github_analyser/Output/split_summary/quickjs_all.csv"
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
     if output_file_exists:
