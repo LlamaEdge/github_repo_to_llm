@@ -4,8 +4,8 @@ import sys
 
 csv.field_size_limit(10**9) 
 
-input_csv = r'C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\llamaedge.csv'
-output_csv = r'C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\llamaedge_merge.csv'
+input_csv = r''
+output_csv = r''
 
 with open(input_csv, mode='r', newline='', encoding='utf-8') as infile, \
      open(output_csv, mode='w', newline='', encoding='utf-8') as outfile:
@@ -26,6 +26,6 @@ with open(input_csv, mode='r', newline='', encoding='utf-8') as infile, \
         elif extension == '.py':
             new_content = f"```python:{path}\n{content}\n```"
         else:
-            new_content = f"language: {path}\n{content}"
+            new_content = new_content = f"The following document is located at {path}\n------\n{content}\n------"
         writer.writerow([new_content])
 print(f"Transformed CSV has been written to {output_csv}")
