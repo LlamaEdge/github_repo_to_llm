@@ -1,14 +1,13 @@
 import pandas as pd
-df = pd.read_csv('/home/aru/Desktop/Github_analyser/Output/main_repos/llamaedge_all.csv')
+df = pd.read_csv(r'C:\Users\91745\OneDrive\Desktop\Github_analyser\local_repo_formatted.csv', header=None)
+df.columns = ['Content']
 def count_words(text):
     if isinstance(text, str):
         return len(text.split())
     else:
-        return 0 
-
+        return 0   
 df['Content_Word_Count'] = df['Content'].apply(count_words)
-
-df.to_csv('output_file.csv', index=False)
+df.to_csv('wasmedge_quickjs.csv', index=False, header=False)
 
 
 
