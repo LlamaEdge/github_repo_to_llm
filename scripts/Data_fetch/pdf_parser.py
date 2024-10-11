@@ -3,21 +3,15 @@ import csv
 import os
 import mimetypes
 import PyPDF2
-
-# Function to get the contents of a GitHub repository
 def get_github_contents(repo_url):
     parts = repo_url.rstrip('/').split('/')
     user = parts[-2]
     repo = parts[-1]
-    
     api_url = f"https://api.github.com/repos/{user}/{repo}/contents/"
-    
     response = requests.get(api_url)
     response.raise_for_status()
     
     return response.json()
-
-# Function to process the contents and fetch PDF files
 def process_contents(contents, paths=[], parent_path=""):
     for item in contents:
         path = parent_path + item['name']
@@ -35,19 +29,15 @@ def process_contents(contents, paths=[], parent_path=""):
                 paths.append({"path": pdf_path, "content": file_response.content})
     return paths
 
-# Function to extract text from PDF and convert it into a CSV file
 def extract_text_from_pdf(pdf_file_path):
     pdf_reader = PyPDF2.PdfReader(pdf_file_path)
     pages_content = []
-
     for page_num in range(len(pdf_reader.pages)):
         page = pdf_reader.pages[page_num]
         text = page.extract_text()
         pages_content.append(text)
-    
     return pages_content
 
-# Function to save extracted PDF pages to a CSV file
 def save_pages_to_csv(pages_content, output_csv_file):
     with open(output_csv_file, 'w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
@@ -55,24 +45,16 @@ def save_pages_to_csv(pages_content, output_csv_file):
         for i, content in enumerate(pages_content):
             writer.writerow([i + 1, content])
 
-# Main function to handle the entire process
 if __name__ == "__main__":
-    # Get GitHub repository URL and process PDF files
     repo_url = input("Enter GitHub repository URL: ")
     contents = get_github_contents(repo_url)
     paths = process_contents(contents)
     
-    # Process each PDF file fetched from the repository
     for pdf_data in paths:
         pdf_file_path = pdf_data["path"]
-        print(f"Processing {pdf_file_path}")
-        
-        # Extract text from PDF
-        pages_content = extract_text_from_pdf(pdf_file_path)
-        
-        # Save extracted text to CSV file
+        print(f"Processing {pdf_file_path}") 
+        pages_content = extract_text_from_pdf(pdf_file_path)        
         csv_output_path = pdf_file_path.replace('.pdf', '_pages.csv')
         save_pages_to_csv(pages_content, csv_output_path)
         print(f"Extracted content from {pdf_file_path} and saved to {csv_output_path}")
-
     print("All PDF files have been processed and converted to CSV.")
