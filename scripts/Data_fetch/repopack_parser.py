@@ -1,4 +1,5 @@
 import csv
+import os
 
 def parse_text_file(input_file):
     data = []
@@ -7,7 +8,6 @@ def parse_text_file(input_file):
 
     with open(input_file, 'r', encoding='utf-8') as f:
         lines = f.readlines()
-
     inside_file_block = False
 
     for line in lines:
@@ -32,45 +32,43 @@ def parse_text_file(input_file):
             "Path": current_path.strip(),
             "Content": ''.join(current_content).strip()
         })
-
     return data
 
-def write_to_csv(data, output_file):
-    with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Path', 'Content']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+def transform_and_write_csv(data, output_csv):
+    with open(output_csv, mode='w', newline='', encoding='utf-8') as outfile:
+        writer = csv.writer(outfile)
         for row in data:
-            writer.writerow(row)
+            path = row['Path']
+            content = row['Content']
+            extension = os.path.splitext(path)[1]
+
+            if extension == '.md':
+                new_content = f"The following is a markdown document located at {path}\n------\n{content}\n------"
+            elif extension == '.rs':
+                new_content = f"```rust:{path}\n{content}\n```"
+            elif extension == '.sh':
+                new_content = f"```bash:{path}\n{content}\n```"
+            elif extension == '.py':
+                new_content = f"```python:{path}\n{content}\n```"
+            elif extension == '.js':
+                new_content = f"```javascript:{path}\n{content}\n```"
+            elif extension == '.json':
+                new_content = f"```json:{path}\n{content}\n```"
+            elif extension == '.txt':
+                new_content = f"The following is a plain text file located at {path}\n------\n{content}\n------"
+            elif extension == '.toml':
+                new_content = f"```toml:{path}\n{content}\n```"
+            elif extension == '.jsx':
+                new_content = f"```jsx:{path}\n{content}\n```"
+            elif extension == '.css':
+                new_content = f"```css:{path}\n{content}\n```"
+            else:
+                new_content = f"The following document is located at {path}\n------\n{content}\n------"
+            writer.writerow([new_content])
 
 if __name__ == "__main__":
     input_file = input("Enter the path of your text file: ")
-    output_file = "repopack_llamaedge.csv"
+    final_output_csv = "transformed_repopack_llamaedge.csv"
     parsed_data = parse_text_file(input_file)
-    write_to_csv(parsed_data, output_file)
-    print(f"CSV file '{output_file}' generated successfully.")
-
-
-'''
-The above script do not consider header files that contain file structure etc.
-to_do function for headers
-for line in lines:
-        # Check for delimiter to separate file blocks
-        if line.strip() == '================================================================':
-            if inside_file_block and current_path and current_content:
-                # Save the current file block
-                data.append({
-                    "Path": current_path.strip(),
-                    "Content": ''.join(current_content).strip()
-                })
-                current_path = None
-                current_content = []
-                inside_file_block = False
-        else:
-            # Treat any text between two delimiters as the file path
-            if not inside_file_block and not current_path:
-                current_path = line.strip()  # Capture the path
-                inside_file_block = True
-            elif inside_file_block:
-                current_content.append(line)
-'''
+    transform_and_write_csv(parsed_data, final_output_csv)
+    print(f"Transformed CSV file '{final_output_csv}' generated successfully.")
