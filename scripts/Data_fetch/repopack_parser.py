@@ -62,13 +62,23 @@ def transform_and_write_csv(data, output_csv):
                 new_content = f"```jsx:{path}\n{content}\n```"
             elif extension == '.css':
                 new_content = f"```css:{path}\n{content}\n```"
+            elif extension == '.java':
+                new_content == f"```java:{path}\n{content}\n```"
+            elif extension == '.hpp':
+                f"```hpp:{path}\n{content}\n```"
+            elif extension == '.c':
+                f"```c:{path}\n{content}\n```"
+            elif extension == '.yml':
+                new_content == f"```yml:{path}\n{content}\n```"
+            elif extension == '.xml':
+                new_content == f"```xml:{path}\n{content}\n```"
             else:
                 new_content = f"The following document is located at {path}\n------\n{content}\n------"
             writer.writerow([new_content])
 
 if __name__ == "__main__":
     input_file = input("Enter the path of your text file: ")
-    final_output_csv = "transformed_repopack_llamaedge.csv"
+    final_output_csv = "wasmedge.csv"
     parsed_data = parse_text_file(input_file)
     transform_and_write_csv(parsed_data, final_output_csv)
     print(f"Transformed CSV file '{final_output_csv}' generated successfully.")
