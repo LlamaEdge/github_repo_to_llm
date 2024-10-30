@@ -1,13 +1,24 @@
 import pandas as pd
-df = pd.read_csv(r'C:\Users\91745\OneDrive\Desktop\Github_analyser\local_repo_formatted.csv', header=None)
+
+# Read the CSV, forcing it into a single column by specifying an unusual separator
+df = pd.read_csv(r'C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\final_repo\llamaedge_repopack.csv', sep='\n', header=None)
+
+# Rename the column to 'Content'
 df.columns = ['Content']
+
+# Define the word count function
 def count_words(text):
     if isinstance(text, str):
         return len(text.split())
     else:
-        return 0   
+        return 0
+
+# Apply the word count function and add the result as a new column
 df['Content_Word_Count'] = df['Content'].apply(count_words)
+
+# Write to a new CSV without headers
 df.to_csv('wasmedge_quickjs.csv', index=False, header=False)
+
 
 
 

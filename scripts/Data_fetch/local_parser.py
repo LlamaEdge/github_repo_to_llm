@@ -16,6 +16,12 @@ def process_local_repo(repo_path, paths=[]):
                 formatted_content = f"The following is a markdown document located at {relative_path}\n------\n{file_content}\n------"
             elif extension == '.rs':
                 formatted_content = f"```rust:{relative_path}\n{file_content}\n```"
+            elif extension == '.css':
+                formatted_content = f"```css:{relative_path}\n{file_content}\n```"
+            elif extension == '.html':
+                formatted_content = f"```html:{relative_path}\n{file_content}\n```"
+            elif extension == '.json':
+                formatted_content = f"```json:{relative_path}\n{file_content}\n```"
             elif extension == '.sh':
                 formatted_content = f"```bash:{relative_path}\n{file_content}\n```"
             elif extension == '.py':
@@ -36,6 +42,6 @@ def write_to_csv(data, output_file):
 if __name__ == "__main__":
     repo_path = input("Enter the local repository path: ")
     paths = process_local_repo(repo_path)
-    output_csv = "local_repo_formatted.csv"
+    output_csv = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\docs\qucik_js_js.csv"
     write_to_csv(paths, output_csv)
     print(f"CSV file '{output_csv}' generated successfully.")

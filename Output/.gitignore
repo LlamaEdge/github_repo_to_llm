@@ -10,3 +10,5 @@ wasmedge_md_short.csv
 llamaedge_short.csv
 llamaedge_split.csv
 .env
+upload.py
+local_repo/summary
