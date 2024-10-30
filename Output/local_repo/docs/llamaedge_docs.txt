@@ -1,0 +1,2896 @@
+Directory Structure:
+
+└── ./
+    ├── developer-guide
+    │   ├── _category_.json
+    │   ├── basic-llm-app.md
+    │   ├── chatbot-llm-app.md
+    │   ├── create-embeddings-collection.md
+    │   ├── embedding-app.md
+    │   ├── multimodal-app.md
+    │   └── rag-api-server.md
+    ├── user-guide
+    │   ├── openai-api
+    │   │   ├── _category_.json
+    │   │   ├── agent-zero.md
+    │   │   ├── continue.md
+    │   │   ├── flowiseai-tool-call.md
+    │   │   ├── intro.md
+    │   │   ├── langchain.md
+    │   │   ├── lobechat.md
+    │   │   ├── obsidian.md
+    │   │   └── translation-agent.md
+    │   ├── server-side-rag
+    │   │   ├── _category_.json
+    │   │   ├── markdown.md
+    │   │   ├── quick-start.md
+    │   │   ├── rag-service.md
+    │   │   └── text.md
+    │   ├── _category_.json
+    │   ├── api-reference.md
+    │   ├── get-started-with-llamaedge.md
+    │   ├── llamaedge-docker.md
+    │   ├── llamaedge-kubernetes.md
+    │   ├── quick-start-command.md
+    │   └── tool-call.md
+    ├── intro.md
+    ├── llamaedge_vs_llamacpp.md
+    ├── llamaedge_vs_ollama.md
+    └── llamaedge_vs_python.md
+
+
+
+---
+File: /developer-guide/_category_.json
+---
+
+{
+  "label": "Developer Guide",
+  "position": 6,
+  "link": {
+    "type": "generated-index",
+    "description": "Developer your own LLM applications on the top of LlamaEdge."
+  }
+}
+
+
+
+---
+File: /developer-guide/basic-llm-app.md
+---
+
+---
+sidebar_position: 1
+---
+
+# Create a basic LLM app
+
+At the most basic level, the LLM completes text. That is why the input text is called a "prompt". The base model simply comes up with the next words that are likely to follow the prompt. In this example, we will demonstrate this basic use case.
+
+## Build and run
+
+First, let's get the source code.
+
+```
+git clone https://github.com/second-state/WasmEdge-WASINN-examples
+cd WasmEdge-WASINN-examples
+cd wasmedge-ggml/basic
+```
+
+Next, build it using the Rust `cargo` tool.
+
+```
+cargo build --target wasm32-wasi --release
+cp target/wasm32-wasi/release/wasmedge-ggml-basic.wasm .
+```
+
+Download a non-chat LLM. This one a code completion model. You give it a request and it will respond with code that meets your request.
+
+```
+curl -LO https://huggingface.co/second-state/StarCoder2-7B-GGUF/resolve/main/starcoder2-7b-Q5_K_M.gguf
+```
+
+Run it! We load the LLM under the name `default` and then ask the `wasmedge-ggml-basic.wasm` app to run the `default` model.
+
+```
+wasmedge --dir .:. \
+  --env n_predict=100 \
+  --nn-preload default:GGML:AUTO:starcoder2-7b-Q5_K_M.gguf \
+  wasmedge-ggml-basic.wasm default
+```
+
+Try a few examples. All those examples are to prompt the LLM to write code and complete the requested tasks.
+
+```
+USER:
+def print_hello_world():
+
+USER:
+fn is_prime(n: u64) -> bool {
+
+USER:
+Write a Rust function to check if an input number is prime:
+```
+
+## Source code walkthrough
+
+The Rust source code for this example is [here](https://github.com/second-state/WasmEdge-WASINN-examples/blob/master/wasmedge-ggml/basic/src/main.rs). The first omportant step in `main()` is to create an execution context. The `config()` function takes an `options` struct that provides inference options for the model, such as context length, temperature etc. You can check the `get_options_from_env()` function in the source code to see how the `options` is constructed.
+
+> The `model_name` is `default`, which correspond to the model name in `--nn-preload`.
+
+```
+let graph = GraphBuilder::new(GraphEncoding::Ggml, ExecutionTarget::AUTO)
+    .config(serde_json::to_string(&options).expect("Failed to serialize options"))
+    .build_from_cache(model_name)
+    .expect("Failed to build graph");
+let mut context = graph
+    .init_execution_context()
+    .expect("Failed to init context");
+```
+
+Next, we simply pass the request prompt text to the execution context as a byte array, and call `compute()`.
+
+```
+let tensor_data = prompt.as_bytes().to_vec();
+context.set_input(0, TensorType::U8, &[1], &tensor_data).expect("Failed to set input");
+context.compute().expect("Failed to compute");
+```
+
+Finally, you simply get the computed output from the execution context, and print it as a string.
+
+```
+let output = get_output_from_context(&context);
+println!("{}", output.trim());
+```
+
+The above helper function `get_output_from_context()` uses a buffer to read data from the context.
+
+```
+fn get_data_from_context(context: &GraphExecutionContext, index: usize) -> String {
+    // Preserve for 4096 tokens with average token length 6
+    const MAX_OUTPUT_BUFFER_SIZE: usize = 4096 * 6;
+    let mut output_buffer = vec![0u8; MAX_OUTPUT_BUFFER_SIZE];
+    let mut output_size = context
+        .get_output(index, &mut output_buffer)
+        .expect("Failed to get output");
+    output_size = std::cmp::min(MAX_OUTPUT_BUFFER_SIZE, output_size);
+
+    return String::from_utf8_lossy(&output_buffer[..output_size]).to_string();
+}
+```
+
+That's it!
+
+
+
+---
+File: /developer-guide/chatbot-llm-app.md
+---
+
+---
+sidebar_position: 2
+---
+
+# Create a chatbot LLM app
+
+The most common LLM app has to be the chatbot. For that, the base LLM is finetuned with a lot of back and forth conversation examples. The base LLM "learns" how to follow conversations and becomes a chat LLM. Since the conversation examples are fed into the LLM using certain formats, the chat LLM will expect the input prompt to follow the same format. This is called the prompt template. Let's see how that works.
+
+## Build and run
+
+First, let's get the source code.
+
+```
+git clone https://github.com/second-state/WasmEdge-WASINN-examples
+cd WasmEdge-WASINN-examples
+cd wasmedge-ggml/llama
+```
+
+Next, build it using the Rust `cargo` tool.
+
+```
+cargo build --target wasm32-wasi --release
+cp target/wasm32-wasi/release/wasmedge-ggml-llama.wasm .
+```
+
+Download a chat LLM.
+
+```
+curl -LO https://huggingface.co/second-state/Llama-2-7B-Chat-GGUF/resolve/main/Llama-2-7b-chat-hf-Q5_K_M.gguf
+```
+
+Run it! We load the LLM under the name `default` and then ask the `wasmedge-ggml-llama.wasm` app to run the `default` model.
+
+```
+wasmedge --dir .:. \
+  --nn-preload default:GGML:AUTO:Llama-2-7b-chat-hf-Q5_K_M.gguf \
+  wasmedge-ggml-llama.wasm default
+```
+
+You can now converse with it on the command line.
+
+## The prompt template
+
+The prompt to the Llama2 LLM must follow the exact same template format it was finetuned on. It is as follows. As you can see, there is a "system prompt" and followed by back-and-forth conversations, ending with the user's new question or prompt. When the LLM answers, we can simply append the answer to the end of the prompt, and then put the next question in `[INST]...[/INST]`.
+
+```
+<s>[INST] <<SYS>>
+You are a helpful assistant. Be polite!
+<</SYS>>
+
+My first question? [/INST] The first answer. </s><s>[INST] My second question? [/INST] The second answer.</s><s>[INST] My third question? [/INST]
+```
+
+> Llama2 is just one of the prompt templates for chat. We also have examples for the [chatml template](https://github.com/second-state/WasmEdge-WASINN-examples/tree/master/wasmedge-ggml/chatml) and the [gemma template](https://github.com/second-state/WasmEdge-WASINN-examples/tree/master/wasmedge-ggml/gemma).
+
+## Code walkthrough
+
+The source code of this project is [here](https://github.com/second-state/WasmEdge-WASINN-examples/blob/master/wasmedge-ggml/llama/src/main.rs). It starts the execution context with `options` and sends in the prompt to `compute()`.
+
+```
+let graph = GraphBuilder::new(GraphEncoding::Ggml, ExecutionTarget::AUTO)
+    .config(serde_json::to_string(&options).expect("Failed to serialize options"))
+    .build_from_cache(model_name)
+    .expect("Failed to build graph");
+let mut context = graph
+    .init_execution_context()
+    .expect("Failed to init context");
+
+... ...
+
+let tensor_data = prompt.as_bytes().to_vec();
+context.set_input(0, TensorType::U8, &[1], &tensor_data).expect("Failed to set input");
+context.compute().expect("Failed to compute");
+let output = get_output_from_context(&context);
+println!("{}", output.trim());
+```
+
+The interesting part, however, is how we construct the prompt. It starts with the system prompt.
+
+```
+let mut saved_prompt = String::new();
+let system_prompt = String::from("You are a helpful, respectful and honest assistant. Always answer as short as possible, while being safe." );
+```
+
+Then, in the question and answer loop, we will append the question, run the inference, and then append the answer to the prompt according to the template.
+
+```
+loop {
+    let input = read_input();
+    if saved_prompt.is_empty() {
+        saved_prompt = format!(
+            "[INST] <<SYS>> {} <</SYS>> {} [/INST]",
+            system_prompt, input
+        );
+    } else {
+        saved_prompt = format!("{} [INST] {} [/INST]", saved_prompt, input);
+    }
+
+    ... ...
+
+    match context.compute() {
+        ... ....
+    }
+    let mut output = get_output_from_context(&context);
+    println!("ASSISTANT:\n{}", output.trim());
+
+    // Update the saved prompt.
+    output = output.trim().to_string();
+    saved_prompt = format!("{} {}", saved_prompt, output);
+}
+```
+
+## Streaming response
+
+An important usability feature of chatbot apps is to stream LLM responses back to the user. LlamaEdge provides APIs that allow the application to retrieve the LLM responses one word at a time. We have a [complete example here](https://github.com/second-state/WasmEdge-WASINN-examples/blob/master/wasmedge-ggml/llama-stream/). Instead of calling `compute()` on the execution context, you should call `compute_single()` instead. The following code retrieves the response one token at a time in a loop and prints the token as it arrives.
+
+```
+println!("ASSISTANT:");
+loop {
+    match context.compute_single() {
+        ... ...
+    }
+    // Retrieve the single output token and print it.
+    let token = get_single_output_from_context(&context);
+    print!("{}", token);
+    io::stdout().flush().unwrap();
+    }
+    println!();
+}
+```
+
+The `get_single_output_from_context()` helper function calls the new API function `get_output_single()` on the execution context.
+
+```
+fn get_single_output_from_context(context: &GraphExecutionContext) -> String {
+    get_data_from_context(context, 0, true)
+}
+
+fn get_data_from_context(context: &GraphExecutionContext, index: usize, is_single: bool) -> String {
+    // Preserve for 4096 tokens with average token length 6
+    const MAX_OUTPUT_BUFFER_SIZE: usize = 4096 * 6;
+    let mut output_buffer = vec![0u8; MAX_OUTPUT_BUFFER_SIZE];
+    let mut output_size = if is_single {
+        context
+            .get_output_single(index, &mut output_buffer)
+            .expect("Failed to get single output")
+    } else {
+        context
+            .get_output(index, &mut output_buffer)
+            .expect("Failed to get output")
+    };
+    output_size = std::cmp::min(MAX_OUTPUT_BUFFER_SIZE, output_size);
+
+    return String::from_utf8_lossy(&output_buffer[..output_size]).to_string();
+}
+```
+
+That's it!
+
+
+
+---
+File: /developer-guide/create-embeddings-collection.md
+---
+
+---
+sidebar_position: 5
+---
+
+# Create knowledge embeddings using the API server
+
+The LlamaEdge API server project demonstrates how to support OpenAI style APIs to upload, chunck, and create embeddings for a text document. In this guide, I will show you how to use those API endpoints as a developer.
+
+> This article is intended to demonstrate capabilities of the open source API server example. You should review the API server source code to learn how those features are implemented. If you are running an RAG application with the API server, check out [this guide](../user-guide/server-side-rag/quick-start).
+
+## Build the API server
+
+Check out the source code and build it using Rust `cargo` tools.
+
+```
+git clone https://github.com/LlamaEdge/LlamaEdge
+
+cd LlamaEdge/api-server
+cargo build --target wasm32-wasi --release
+```
+
+The `llama-api-server.wasm` file is in the `target` directory.
+
+```
+cp target/wasm32-wasi/release/llama-api-server.wasm . 
+```
+
+## Download models
+
+We will need an LLM and a specialized embedding model. While the LLM technically can create embeddings, specialized embedding models can do it much much better.
+
+```
+# The chat model is Llama2 7b chat
+curl -LO https://huggingface.co/second-state/Llama-2-7B-Chat-GGUF/resolve/main/Llama-2-7b-chat-hf-Q5_K_M.gguf
+
+# The embedding model is all-MiniLM-L6-v2
+curl -LO https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-ggml-model-f16.gguf
+```
+
+## Start the API server
+
+We will now start the API server with both models. The LLM is named `default` and the embedding model is named `embedding`. They each have an external facing model name in the `--model-name` argument.
+
+```
+wasmedge --dir .:. \
+   --nn-preload default:GGML:AUTO:Llama-2-7b-chat-hf-Q5_K_M.gguf \
+   --nn-preload embedding:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
+   llama-api-server.wasm -p llama-2-chat,embedding --web-ui ./chatbot-ui \
+     --model-name Llama-2-7b-chat-hf-Q5_K_M,all-MiniLM-L6-v2-ggml-model-f16 \
+     --ctx-size 4096,384 \
+     --log-prompts --log-stat
+```
+
+## Create the embeddings
+
+First, we use the `/files` API to upload a file `paris.txt` to the API server.
+
+```
+curl -X POST http://127.0.0.1:8080/v1/files -F "file=@paris.txt"
+```
+
+If the command is successful, you should see the similar output as below in your terminal.
+
+```
+{
+    "id": "file_4bc24593-2a57-4646-af16-028855e7802e",
+    "bytes": 2161,
+    "created_at": 1711611801,
+    "filename": "paris.txt",
+    "object": "file",
+    "purpose": "assistants"
+}
+```
+
+Next, take the `id` and request the `/chunks` API to chunk the file `paris.txt` into smaller pieces. The reason is that each embedding vector can only hold limited amount of information. The embedding model can "understand" the file content, and determine the optimistic places to break up the text into chunks.
+
+```
+curl -X POST http://localhost:8080/v1/chunks \
+    -H 'accept:application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"id":"file_4bc24593-2a57-4646-af16-028855e7802e", "filename":"paris.txt"}'
+```
+
+The following is an example return with the generated chunks.
+
+```
+{
+    "id": "file_4bc24593-2a57-4646-af16-028855e7802e",
+    "filename": "paris.txt",
+    "chunks": [
+        "Paris, city and capital of France, ..., for Paris has retained its importance as a centre for education and intellectual pursuits.",
+        "Paris’s site at a crossroads ..., drawing to itself much of the talent and vitality of the provinces."
+    ]
+}
+```
+
+Finally, use the `/embeddings` API to generate the embedding vectors. Make sure that you pass in the embedding model name.
+
+```bash
+curl -X POST http://localhost:8080/v1/embeddings \
+    -H 'accept:application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"model": "all-MiniLM-L6-v2-ggml-model-f16", "input":["Paris, city and capital of France, ..., for Paris has retained its importance as a centre for education and intellectual pursuits.", "Paris’s site at a crossroads ..., drawing to itself much of the talent and vitality of the provinces."]}'
+```
+
+The embeddings returned are like below.
+
+```json
+{
+    "object": "list",
+    "data": [
+        {
+            "index": 0,
+            "object": "embedding",
+            "embedding": [
+                0.1428378969,
+                -0.0447309874,
+                0.007660218049,
+                ...
+                -0.0128974719,
+                -0.03543198109,
+                0.03974733502,
+                0.00946635101,
+                -0.01531364303
+            ]
+        },
+        {
+            "index": 1,
+            "object": "embedding",
+            "embedding": [
+                0.0697753951,
+                -0.0001159032545,
+                0.02073983476,
+                ...
+                0.03565846011,
+                -0.04550019652,
+                0.02691745944,
+                0.02498772368,
+                -0.003226313973
+            ]
+        }
+    ],
+    "model": "all-MiniLM-L6-v2-ggml-model-f16",
+    "usage": {
+        "prompt_tokens": 491,
+        "completion_tokens": 0,
+        "total_tokens": 491
+    }
+}
+```
+
+## Next step
+
+Once you have the embeddings in a JSON file, you can store them into a vector database. It will probably require you to write a script to combine each vector point with its corresponding source text, and then upsert into the database's vector collection. This step will be specific to the vector database and RAG strategy you choose.
+
+
+
+
+
+---
+File: /developer-guide/embedding-app.md
+---
+
+---
+sidebar_position: 4
+---
+
+# Create an embedding app
+
+An important LLM task is to generate embeddings for natural language sentences. It converts a sentence to a vector of numbers called an "embedding". The embedding vectors can then be stored in a vector database. You can search it later to find similiar sentences.
+
+## Build and run
+
+First, let's get the source code.
+
+```
+git clone https://github.com/second-state/WasmEdge-WASINN-examples
+cd WasmEdge-WASINN-examples
+cd wasmedge-ggml/embedding
+```
+
+Next, build it using the Rust `cargo` tool.
+
+```
+cargo build --target wasm32-wasi --release
+cp target/wasm32-wasi/release/wasmedge-ggml-llama-embedding.wasm .
+```
+
+Download an embedding model.
+
+```
+curl -LO https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-ggml-model-f16.gguf
+```
+
+Run it! We load the embedding model under the name `default` and then ask the `wasmedge-ggml-llama-embedding.wasm` app to run the `default` model.
+
+```
+$ wasmedge --dir .:. \
+  --nn-preload default:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
+  wasmedge-ggml-llama-embedding.wasm default
+```
+
+Now, you can enter a prompt and the program will use the embedding model to generate the embedding vector for you!
+
+```
+Prompt:
+What's the capital of the United States?
+Raw Embedding Output: {"n_embedding": 384, "embedding": [0.5426152349,-0.03840282559,-0.03644151986,0.3677068651,-0.115977712...(omitted)...,-0.003531290218]}
+Interact with Embedding:
+N_Embd: 384
+Show the first 5 elements:
+embd[0] = 0.5426152349
+embd[1] = -0.03840282559
+embd[2] = -0.03644151986
+embd[3] = 0.3677068651
+embd[4] = -0.115977712
+```
+
+## Code walkthrough
+
+The Rust source code for this project is [here](https://github.com/second-state/WasmEdge-WASINN-examples/blob/master/wasmedge-ggml/embedding/src/main.rs). First, we start the execution context with the `--nn-preload` model by its name.
+
+```
+let graph = GraphBuilder::new(GraphEncoding::Ggml, ExecutionTarget::AUTO)
+    .config(options.to_string())
+    .build_from_cache(model_name)
+    .expect("Create GraphBuilder Failed, please check the model name or options");
+let mut context = graph
+    .init_execution_context()
+    .expect("Init Context Failed, please check the model");
+```
+
+Then we call the `compute()` function on the execution context, and pass in a sentence to compute an embedding vector.
+
+```
+let tensor_data = prompt.as_bytes().to_vec();
+context.set_input(0, TensorType::U8, &[1], &tensor_data).unwrap();
+context.compute().unwrap();
+```
+
+You can then retrieve the generated embedding vector from the execution context. The embedding data is a JSON structure. The `n_embedding` field is the size of embedding vector. This vector size is determined by the embedding model itself. That is, an embedding model will always generate embeddings of the same size. The `embedding` field is the array for the vector data.
+
+```
+let embd = get_embd_from_context(&context);
+let n_embd = embd["n_embedding"].as_u64().unwrap();
+
+println!("Show the first 5 elements:");
+for idx in 0..5 {
+    println!("embd[{}] = {}", idx, embd["embedding"][idx as usize]);
+}
+```
+
+The `get_embd_from_context()` function is straightforward. It simply retrieves data from the execution context's output buffer.
+
+```
+fn get_embd_from_context(context: &GraphExecutionContext) -> Value {
+    serde_json::from_str(&get_data_from_context(context, 0)).unwrap()
+}
+
+fn get_data_from_context(context: &GraphExecutionContext, index: usize) -> String {
+    // Preserve for 4096 tokens with average token length 15
+    const MAX_OUTPUT_BUFFER_SIZE: usize = 4096 * 15 + 128;
+    let mut output_buffer = vec![0u8; MAX_OUTPUT_BUFFER_SIZE];
+    let mut output_size = context.get_output(index, &mut output_buffer).unwrap();
+    output_size = std::cmp::min(MAX_OUTPUT_BUFFER_SIZE, output_size);
+
+    String::from_utf8_lossy(&output_buffer[..output_size]).to_string()
+}
+```
+
+You can upsert the `embd["embedding"]` data structure to any vector database you might use.
+
+
+
+---
+File: /developer-guide/multimodal-app.md
+---
+
+---
+sidebar_position: 3
+---
+
+# Create a multimodal app
+
+Coming soon.
+
+
+---
+File: /developer-guide/rag-api-server.md
+---
+
+---
+sidebar_position: 5
+---
+
+# Implement your own RAG API server
+
+Coming soon.
+
+
+---
+File: /user-guide/openai-api/_category_.json
+---
+
+{
+  "label": "Ecosystem apps",
+  "position": 10,
+  "link": {
+    "type": "generated-index"
+  }
+}
+
+
+
+---
+File: /user-guide/openai-api/agent-zero.md
+---
+
+---
+sidebar_position: 9
+---
+
+# Agent Zero
+
+[Agent Zero](https://github.com/frdel/agent-zero) is a general purpose AI agent application. You can simply ask it to accomplish tasks on the command line. 
+It is designed to be dynamic, organically growing, and learning as users use it. It leverages your computer as a tool to accomplish your tasks.
+
+## Prerequisites
+
+Follow [this guide](./intro.md) to run an open-source LLM locally. In this example, we will use [Llama-3.1-8B](https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF) as the chat model and nomic-text-embed as the embedding model. 
+
+```
+curl -LO https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf
+curl -LO https://huggingface.co/second-state/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5-Q5_K_M.gguf
+```
+
+Then start the LlamaEdge API server with the Llama-3.1-8B model `Meta-Llama-3.1-8B-Instruct-Q5_K_M` and nomic embed model `nomic-embed-text-v1.5.f16`.
+
+```
+wasmedge --dir .:. \
+    --nn-preload default:GGML:AUTO:Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf \
+    --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+    llama-api-server.wasm \
+    --model-alias default,embedding \
+    --model-name Meta-Llama-3.1-8B-Instruct-Q5_K_M,nomic-embed-text-v1.5.f16 \
+    --prompt-template llama-3-chat,embedding \
+    --batch-size 128,8192 \
+    --ctx-size 32768,8192
+```
+> You can also start a Gaia node for the Llama-3.1-8B model and the nomic embed model. You can then use the node's API URL endpoint and model name in this app.
+
+
+**You will also need to make sure your Docker engine is running.** Because the Agent Zero framework will leverage Docker to execute the generated code.
+
+## Configure the agent
+
+First, we will need to get the source code of a Gaia-compatible version of Agent Zero.
+
+```
+git clone https://github.com/JYC0413/agent-zero-gaia.git
+cd agent-zero-gaia
+```
+
+Then, let's install the required dependencies.
+
+```
+pip install -r requirements.txt
+```
+
+Next, let's configure the gaia node and other parameters.
+
+```
+cp example.env .env
+```
+
+You will need to configure the following items:
+
+* `CHAT_MODEL_BASE_URL`: URL for the LLM API base URL. E.g., `http://localhost:8080/v1`
+* `CHAT_MODEL_NAME`: Name of the chat model to be used. E.g., `Meta-Llama-3.1-8B-Instruct-Q5_K_M`
+* `CHAT_API_KEY`: An API key to access the LLM services. You can enter several random characters here. E.g., `LlamaEdge`
+* `EMBEDDING_MODEL_BASE_URL`: URL for the embedding model API base URL. E.g., `http://localhost:8080/v1`
+* `EMBEDDING_MODEL_NAME`: Name of the embedding model name. E.g., `nomic-embed-text-v1.5.f16`
+* `EMBEDDING_API_KEY`: An API key to access the embedding services. You can enter several random characters here. E.g., `LlamaEdge`
+
+## Run the agent
+
+Finally, let's run the Agent Zero application backed by the Llama 3.1 8b model.
+
+```
+python main.py
+```
+
+You can interact with Agent Zero via the command line. You will see the Agent Zero framework will call the related tools and execute some code to complete your task.
+
+### Example 1
+
+Get time in Berlin and Seattle
+
+![](agent-zero-01.png)
+
+![](agent-zero-02.png)
+
+Save the above result in a file using node.js
+
+![](agent-zero-03.png)
+
+### Example 2
+
+Install [mc](https://midnight-commander.org/). do not use `-y` flag
+
+![](agent-zero-04.png)
+
+### Example 3
+
+Run `top`, show the system load
+
+![](agent-zero-05.png)
+
+### Example 4
+
+Memorize my openai api key - 563434643464
+
+![](agent-zero-06.png)
+
+### Example 5
+
+Extract an mp3 audio track from a mp4 video file using ffmpeg. You will need to put an mp4 file (e.g., `video.mp4`) into the `work_dir` and tell the agent about it.
+
+![](agent-zero-07.png)
+
+![](agent-zero-08.png)
+
+![](agent-zero-09.png)
+
+
+
+
+
+
+---
+File: /user-guide/openai-api/continue.md
+---
+
+---
+sidebar_position: 3
+---
+
+# AI coding assistant: Continue
+
+[Continue](https://github.com/continuedev/continue) is the leading open-source AI code assistant.
+It is a copilot-like plugin for VSCode and JetBrains to provide custom autocomplete and chat experiences inside 
+those IDEs. You can easily configure it to use a local LlamaEdge LLM as backends. In fact, you can choose different models for
+
+* the autocomplete model for coding tasks
+* the chat model for understanding and discussing code
+* the embedding model to provide chat context based on local files
+
+## Prerequisites
+
+Follow [this guide](./intro.md) to run an open-source LLM locally.
+Since we have a coding application here, you should download a coding LLM like the Codestral.
+
+```
+curl -LO https://huggingface.co/second-state/Codestral-22B-v0.1-GGUF/resolve/main/Codestral-22B-v0.1-hf-Q5_K_M.gguf
+```
+
+Then start the LlamaEdge API server with the Codestral model and name it `Codestral-22B-v0.1-hf-Q5_K_M`.
+
+```
+wasmedge --dir .:. \
+    --nn-preload default:GGML:AUTO:Codestral-22B-v0.1-hf-Q5_K_M.gguf \
+    --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+    llama-api-server.wasm \
+    --model-alias default,embedding \
+    --model-name Codestral-22B-v0.1-hf-Q5_K_M,nomic-embed-text-v1.5.f16 \
+    --prompt-template mistral-instruct,embedding \
+    --batch-size 128,8192 \
+    --ctx-size 32768,8192
+```
+
+## Install Continue
+
+[Load this link](https://marketplace.visualstudio.com/items?itemName=Continue.continue) to install the Continue IDE plugin.  
+It will open up your VSCode when you click on the **Install** button on the web page. When you are
+asked to configure Continue, just click on **Skip** and finish the installation without selecting a local model.
+
+## Configure Continue
+
+Click on the gear icon on the toolbar to load the `config.json` file for the Continue plugin. The file is located
+in your own home directory `$HOME/.continue/config.json`.
+You can now change the `config.json` file as follows. 
+It asks the Continue plugin to use different models for 
+chat, code autocomplete and embeddings.
+
+```
+{
+  "models": [
+    {
+      "model": "Codestral-22B-v0.1-hf-Q5_K_M",
+      "title": "LlamaEdge",
+      "apiBase": "http://localhost:8080/v1/",
+      "provider": "openai"
+    }
+  ],
+  "tabAutocompleteModel": {
+      "title": "Autocomplete",
+      "apiBase": "http://localhost:8080/v1/",
+      "model": "Codestral-22B-v0.1-hf-Q5_K_M",
+      "provider": "openai"
+  },
+  "embeddingsProvider": {
+    "provider": "openai",
+    "model": "nomic-embed-text-v1.5.f16",
+    "apiBase": "http://localhost:8080/v1/"
+  },
+  "customCommands": [
+    {
+      "name": "test",
+      "prompt": "{{{ input }}}\n\nWrite a comprehensive set of unit tests for the selected code. It should setup, run tests that check for correctness including important edge cases, and teardown. Ensure that the tests are complete and sophisticated. Give the tests just as chat output, don't edit any file.",
+      "description": "Write unit tests for highlighted code"
+    }
+  ],
+  "allowAnonymousTelemetry": true
+}
+```
+
+Save the `config.json` file and you are done!
+
+> It is important to note that Continue requires the API endpoint to include a `/` at the end.
+
+## Use the plugin
+
+The following screenshot shows how you can chat with an error message
+inside the IDE.
+
+![](continue-01.png)
+
+
+
+
+
+
+---
+File: /user-guide/openai-api/flowiseai-tool-call.md
+---
+
+---
+sidebar_position: 5
+---
+
+# FlowiseAI tool call
+
+FlowiseAI is a low-code tool for developers to build customized LLM orchestration flows & AI agents. 
+You can configure the FlowiseAI tool to use a local LlamaEdge LLM that supports [tool calling](https://github.com/LlamaEdge/LlamaEdge/blob/main/api-server/ToolUse.md).
+
+## Prerequisites
+
+Follow [this guide](./intro.md) to run an open-source LLM locally.
+In this example, we need an open source LLM that is capable of generating tool call (JSON) responses.
+The Mistral v0.3 7B model is a good choice here.
+
+```
+curl -LO https://huggingface.co/second-state/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q5_K_M.gguf
+```
+
+Then start the LlamaEdge API server with the Mistral model and name it `Mistral-7B-Instruct-v0.3.Q5_K_M`.
+
+```
+wasmedge --dir .:. \
+    --nn-preload default:GGML:AUTO:Mistral-7B-Instruct-v0.3.Q5_K_M.gguf \
+    --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+    llama-api-server.wasm \
+    --model-alias default,embedding \
+    --model-name Mistral-7B-Instruct-v0.3.Q5_K_M,nomic-embed-text-v1.5.f16 \
+    --prompt-template mistral-tool,embedding \
+    --batch-size 128,8192 \
+    --ctx-size 32768,8192
+```
+
+> You can [start a Gaia node](https://github.com/GaiaNet-AI/node-configs/tree/main/mistral-0.3-7b-instruct-tool-call) for the `Mistral-7B-Instruct-v0.3.Q5_K_M` model with tool call support. You can then use the node's API URL endpoint and model name in your tool call apps.
+
+## Start a FlowiseAI server
+
+Follow [the FlowiseAI guide](https://docs.flowiseai.com/getting-started) to install Flowise locally
+
+```
+npm install -g flowise
+npx flowise start
+```
+
+After running successfully, you can open `http://localhost:3000` to check out the Flowise AI tool.
+
+## Build a chatbot for realtime IP lookup
+
+Step 1: Create a new **Chatflow** from the UI.
+
+![](flowise-tool-01.png)
+
+Step 2: On the **Chatflow** canvas, add a node called **ChatLocalAI**.
+
+![](flowise-tool-02.png)
+
+Step 3: Configure the **ChatLocalAI** widget to use the local LlamaEdge.
+
+* Base path: `http://localhost:8080/v1`
+* Model name: e.g., `Mistral-7B-Instruct-v0.3.Q5_K_M`
+
+Step 4: Add a node called **Custom Tool** 
+
+Create a function named `get_ip_address_geo_location`. 
+The function requires a `string` parameter called `ip`.
+
+The **Tool description** field is the "prompt" that tells the LLM when to use this function. In this example,
+if the LLM detects that the user is asking about the city or country of an IP address, it will
+return a tool call response asking FlowiseAI to perform this function call first.
+
+![](flowise-tool-03.png)
+
+Now you can add JavaScript code for this function. It looks up the location of the input `ip` parameter.
+
+```
+const fetch = require("node-fetch")
+const url = "http://ipwho.is/"+$ip
+
+try {
+  const response = await fetch(url)
+  const result = await response.text()
+  console.log(result)
+  return result
+} catch(error) {
+  console.error(error)
+}
+```
+
+![](flowise-tool-04.png)
+
+Step 5: Add a node called **Buffer Memory** to the canvas.
+
+Step 6: Add a node called **Tool Agent**.
+
+Step 7: Connect the nodes.
+
+Connect the **Custom Tool** and **Buffer Memory** nodes to the appropriate connectors on the 
+**Tool Agent** node. Connect the **ChatLocalAI** node to the **Custom Tool**.
+
+![](flowise-tool-05.png)
+
+Step 8: Save the **Chatflow**.
+
+## Give it a try
+
+From the FlowiseAI UI, you can open a chat window to chat with the **ChatLocalAI** you just created. Let's
+ask a question:
+
+```
+What's the location of this address 35.222.115.181
+```
+
+The LLM understands that the request is to find a location for an IP address, and sees that we have a function
+called `get_ip_address_geo_location` in tools, which has a description that matches this task. 
+So, it responses with a JSON message to call this function with
+the IP address it extracts from the user query.
+
+This tool calling JSON message is NOT displayed to the user in the chatbot. Instead, the FlowiseAI
+**Custom Tool** node captures it and executes the JavaScript code associated with this tool call. The result of
+the tool call is then sent back to the LLM together with the original query, 
+which is why we need the **Buffer Memory** node BTW, 
+and the LLM formulates a human readable response to the original question.
+
+![](flowise-tool-06.png)
+
+
+
+
+---
+File: /user-guide/openai-api/intro.md
+---
+
+---
+sidebar_position: 1
+---
+
+# Start an LlamaEdge API service
+
+Since LlamaEdge provides an OpenAI-compatible API service, it can be a drop-in replacement for OpenAI in almost all LLM applications and frameworks. 
+Checkout the articles in this section for instructions and examples for how to use locally hosted LlamaEdge API services in popular LLM apps.
+
+But first, you will need to start an [LlamaEdge API server](https://github.com/LlamaEdge/LlamaEdge/tree/main/api-server). But the steps are a little different from just a chatbot.
+
+## Step 1: Install WasmEdge
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s
+```
+
+## Step 2: Download an LLM model
+
+```
+curl -LO https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf
+```
+
+## Step 3: Download an embedding model
+
+```
+curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
+```
+
+It is used by many agent and RAG apps to convert text-based knowledge into vectors for easy search and retrieval.
+
+## Step 4: Start the API server!
+
+```
+wasmedge --dir .:. \
+    --nn-preload default:GGML:AUTO:Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf \
+    --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+    llama-api-server.wasm \
+    --model-alias default,embedding \
+    --model-name llama-3-8b-chat,nomic-embed \
+    --prompt-template llama-3-chat,embedding \
+    --batch-size 128,8192 \
+    --ctx-size 8192,8192
+```
+
+You can learn more about these CLI options [here](https://github.com/LlamaEdge/LlamaEdge/tree/main/api-server).
+
+* The `--model-alias` specifies which of the preloaded models is for chat and embedding respectively. In this case
+  * The alias `default` corresponds to `Meta-Llama-3.1-8B-Instruct-Q5_K_M.gguf`
+  * The alias `embedding` corresponds to `nomic-embed-text-v1.5.f16.gguf`
+* The `--model-name` can be any string, and you will need it in API calls when the client wants to select a model to interact with. The two values correspond to the `default` and `embedding` model respectively.
+* The `--prompt-template` specifies the prompt template name for the chat model, and it uses `embedding` for the prompt template name for the embedding model.
+* The `--ctx-size` specifies the context window size for the `default` and `embedding` model respectively.
+* The `--batch-size` specifies the batch job size for the `default` and `embedding` model respectively.
+
+That's it. You can now test the API server by sending it a request.
+Notice that model name `llama-3-8b-chat` matches what you specified in the `llama-api-server.wasm` command.
+
+```
+curl -X POST http://0.0.0.0:8080/v1/chat/completions -H 'accept:application/json' -H 'Content-Type: application/json' -d '{"messages":[{"role":"system", "content":"You are a helpful AI assistant"}, {"role":"user", "content":"What is the capital of France?"}], "model":"llama-3-8b-chat"}'
+```
+
+You should receive a JSON message that contains a reply to the question in the response.
+
+## OpenAI replacement
+
+Now, you can ready to use this API server in OpenAI ecosystem apps as a drop-in replacement for the OpenAI API!
+In general, for any OpenAI tool, you could just replace the following.
+
+|Config option | Value | Note |
+|-----|--------|-------|
+| API endpoint URL | `http://localhost:8080/v1` | If the server is accessible from the web, you could use the public IP and port |
+| Model Name (for LLM) | `llama-3-8b-chat` | The first value specified in the `--model-name` option |
+| Model Name (for Text embedding) | `nomic-embed` | The second value specified in the `--model-name` option |
+| API key | Empty | Or any value if the app does not permit empty string |
+
+## The OpenAI Python library
+
+You can install the [official OpenAI Python library](https://pypi.org/project/openai/) as follows.
+
+```
+pip install openai
+```
+
+When you create an OpenAI client using the library, you can pass in the API endpoint point as the `base_url`.
+
+```
+import openai
+
+client = openai.OpenAI(base_url="http://localhost:8080/v1", api_key="")
+```
+
+Alternatively, you could set an environment variable at the OS level.
+
+```
+export OPENAI_API_BASE=http://localhost:8080/v1
+```
+
+Then, when you make API calls from the `client`, make sure that the `model` is set to the model name
+available on your node.
+
+```
+response = client.chat.completions.create(
+    model="llama-3-8b-chat",
+    messages=[
+        {"role": "system", "content": "You are a strategic reasoner."},
+            {"role": "user", "content": "What is the purpose of life?"}
+        ],
+        temperature=0.7,
+        max_tokens=500
+    ]
+)
+```
+
+That's it! You can now take any application built with the official OpenAI Python library and use your own
+LlamaEdge device as its backend!
+
+
+
+
+---
+File: /user-guide/openai-api/langchain.md
+---
+
+---
+sidebar_position: 7
+---
+
+# LangChain
+
+In this tutorial, I will introduce you how to build a client-side RAG using Llama2-7b-chat model, based on LlamaEdge and Langchain.
+
+> LlamaEdge has [recently became](https://twitter.com/realwasmedge/status/1742437253107130552) an official inference backend for LangChain, allowing LangChain applications to run open source LLMs on heterogeneous GPU devices. 
+
+### Build the client app using Langchian with vector DB support
+
+First, let's build a chatbot web app using Langchain. This part will be built in Python. The app includes uploading file and attaches the Chroma DB and the gpt4all embedding algorithms.
+
+To quick start, fork or clone [the wasm-llm repo](https://github.com/second-state/wasm-llm) and open the wasm-bot folder.
+
+```
+git clone https://github.com/second-state/wasm-llm.git
+cd wasm-llm/wasm-rag-service
+```
+
+Next, let’s install the required python dependencies for this program. We will use conda to control the version and environment.
+
+Follow the [miniconda installation instruction](https://docs.conda.io/projects/miniconda/en/latest/#quick-command-line-install) to install mini conda your own machine. After that, create a conda environment for the chatbot web app. Let’s use chatbot as the name.
+
+
+```
+conda create -n wasm-rag python=3.11
+conda activate wasm-rag
+```
+
+Then, you may notice that your terminal has entered the `chatbot` environment. Let’s [install the dependencies for this chatbot app](https://github.com/second-state/wasm-llm/blob/main/wasm-bot/requirements.txt). All the dependencies are included in the `requirements.txt`.
+
+
+```
+pip install -r requirements.txt
+```
+
+With all dependencies installed, then we can execute the chatbot app.
+
+```
+streamlit run app.py
+```
+
+
+If everything goes well, you will see the following messages on your terminal. In the meanwhile,  a web page will be opened in your browser.
+
+```
+You can now view your Streamlit app in your browser.
+Local URL: http://localhost:8501
+Network URL: http://192.168.0.103:8501
+```
+
+![image](https://github.com/LlamaEdge/docs/assets/45785633/af418d8e-9377-4613-b976-4ed3bec1836c)
+
+Now, we have completed the first part — a RAG client app waiting for a LLM backend to answer user’s question.
+
+
+### Build an OpenAI compatible API server for the open source LLM using LlamaEdge
+
+
+Let’s build a API server for the open source LLM with WasmEdge.
+
+First, install WasmEdge runtime with one single command line.
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- --plugin wasi_nn-ggml
+```
+
+Second, download the model file in GGUF file. Here, I use llama2-7b as an example. We have tried several LLMs and concluded that Llama2-7B is the beat for RAG applications.
+
+```
+curl -LO https://huggingface.co/second-state/Llama-2-7B-Chat-GGUF/resolve/main/Llama-2-7b-chat-hf-Q5_K_M.gguf
+```
+
+Third, download an API server app. It is a cross-platform portable Wasm app that can run on many CPU and GPU devices. 
+
+
+```
+curl -LO https://github.com/second-state/LlamaEdge/releases/latest/download/llama-api-server.wasm
+```
+
+
+Finally, use the following command lines to start an API server for the model.  If you have did the above steps, just run the follwing command line.
+
+
+```
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:Llama-2-7b-chat-hf-Q5_K_M.gguf llama-api-server.wasm -p llama-2-chat -c 4096
+```
+
+
+If everything goes well, the following information will be printed on the terminal.
+
+```
+[INFO] Socket address: 0.0.0.0:8080
+[INFO] Model name: default
+[INFO] Model alias: default
+[INFO] Prompt context size: 512
+[INFO] Number of tokens to predict: 1024
+[INFO] Number of layers to run on the GPU: 100
+[INFO] Batch size for prompt processing: 512
+[INFO] Temperature for sampling: 0.8
+[INFO] Penalize repeat sequence of tokens: 1.1
+[INFO] Prompt template: HumanAssistant
+[INFO] Log prompts: false
+[INFO] Log statistics: false
+[INFO] Log all information: false
+[INFO] Starting server ...
+ggml_init_cublas: GGML_CUDA_FORCE_MMQ:   no
+ggml_init_cublas: CUDA_USE_TENSOR_CORES: yes
+ggml_init_cublas: found 1 CUDA devices:
+  Device 0: Orin, compute capability 8.7, VMM: yes
+[INFO] Plugin version: b1953 (commit 6f9939d1)
+[INFO] Listening on http://0.0.0.0:8080
+```
+
+Now the Llama2-7B-Chat model is hosted at the port of 8080.
+
+
+### Connect your self-hosted LLMs with the chatbot web app
+
+
+Go back to the web page opened in the first step. Click Use cusom service on the bottom left of page and click the Connect button.
+Then you will see a section to upload your own data locally.  Upload a pdf file here. When the uploading process is done, the bot will send you a message: “Hello 👋, how can I help you?”,  which is a ready sign.
+
+Ask a question, and the bot will reply to you based on the file you uploaded.
+
+![image](https://github.com/LlamaEdge/docs/assets/45785633/0b5273f6-7edd-4fcf-b917-c5931609c5db)
+
+### What’s next?
+
+We will introduce you how to build such a client-side RAG app with OpenWebui
+
+
+
+
+
+---
+File: /user-guide/openai-api/lobechat.md
+---
+
+---
+sidebar_position: 2
+---
+
+# LobeChat
+
+The [LobeChat](https://github.com/lobehub/lobe-chat) framework is a modern chatbot framework that supports a wide range of 
+AI models and custom plugins.
+You can use configure it to use LlamaEdge as the backend Large Language Model (LLM) replacing OpenAI. This integration supports:
+
+* The hosted LobeChat service
+* Any product built on the open-source LobeChat framework
+
+## Prerequisites
+
+Follow [this guide](./intro.md) to run an open-source LLM locally.
+
+## Steps to integrate LobeChat and LlamaEdge
+
+Open the [LobeChat Language Model setting page](https://chat-preview.lobehub.com/settings/modal?agent=&session=inbox&tab=llm&topic=CIfo1UYZ) and choose the first one OpenAI.
+
+First, Enter some random characters in the OpenAI API Key field, and input `http://localhost:8080/v1` in the API Proxy Address field.
+
+Then, enable the Client-Side Fetching Mode. 
+
+Next, Click on the Get Model List button to automatically detect the model you're using. Select that model from the list.
+
+Finally, you can click on the Check button to check the connect status.
+
+![](lobechat-llamaedge-01.png)
+
+After that, go back to [the chat page](https://chat-preview.lobehub.com/chat?session=inbox&agent=) and choose the model you just chose in the previous step. Now you can chat with the model via LobeChat.
+
+![](lobechat-llamaedge-02.png)
+
+
+
+
+---
+File: /user-guide/openai-api/obsidian.md
+---
+
+---
+sidebar_position: 4
+---
+
+# Obsidian
+
+Obsidian is a note-taking application that enables users to create, link, and visualize ideas directly on their devices. With Obsidian, you can seamlessly sync notes across devices, publish your work, and collaborate with others. The app is highly customizable, allowing users to enhance functionality through a wide range of plugins and themes. Its unique features include a graph view to visualize connections between notes, making it ideal for managing complex information and fostering creativity. Obsidian also emphasizes data privacy by storing notes locally.
+
+**Obsidian-local-gpt is a plugin that** allows users to run a local large language model within Obsidian note-taking application. This plugin enables various AI-powered features directly in Obsidian, such as text generation, summarization, spelling and grammar checks, and task extraction. 
+
+A key feature of this plugin is that it supports a large number of open source LLMs. You can choose an LLM that is finetuned for your specific task -- eg if you take a lot of coding notes, you could choose a Codestral or CodeLlama or DeepSeek LLM. Furthermore, if you choose to run the LLM locally on your own computer, the plugin would support private and offline use of the LLM features. For more details, you can visit the [obsidian-local-gpt GitHub page](https://github.com/pfrankov/obsidian-local-gpt).
+
+This guide explains how to set up and use the plugin with a lightweight LlamaEdge LLM as an alternative to OpenAI or Ollama.
+
+## Prerequisites
+
+Follow [this guide](./intro.md) to run an open-source LLM locally.
+
+## Obsidian-local-gpt Plugin Setup
+
+Make sure you have already installed the Obsidian app on your device.
+
+
+### Install the Obsidian-local-gpt Plugin
+
+* Open Obsidian settings, navigate to "Community plugins", and search for `obsidian-local-gpt`.
+* Install the plugin by clicking on "Install".
+
+![](obsidian-enable.png)
+
+Then click on "Enable".
+
+
+### **Configure the Plugin**
+
+1. Go to the plugin settings.
+2. Select "AI Provider" as "OpenAI compatible server".
+3. Set the server URL. Use `http://localhost:8080/` for your local LlamaEdge LLM. 
+
+![](obsidian-configure.png)
+
+Make sure to click the refresh button and choose the **llama-3-8b-chat** model.
+
+![](obsidian-model.png)
+
+### Configure Obsidian Hotkey 
+
+1. Open Obsidian Settings
+2. Go to Hotkeys
+3. Filter "Local" and you should see "Local GPT: Show context menu"
+4. Click on `+` icon and press hotkey (e.g. `⌘ + M`)
+
+![](obsidian-hotkey.png)
+
+As long as you have set the hotkey, while writing or editing a note, select the text you want to interact with, and press the hotkey you have set to use this LLM powered plugin!
+
+
+## Use Cases
+
+### **Text Continuation**
+
+* Select a text segment, right-click, and choose "Continue writing". The model will generate the continuation (dislayed in the screenshot in grey).
+
+![](obsidian-text-continuation.png)
+
+### **Summarization**
+
+* Select a longer text segment, right-click, and choose "Summarize text". The model provides a summary as below of the CNAI report content I seleted.
+
+![](obsidian-summarization.png)
+
+Here is a concise summary of the key points:
+
+* Cloud Native (CN) refers to well-balanced systems built using microservices, promoting modular design and reusability.
+* Kubernetes has become the de facto cloud operating system, offering scalability, resilience, and DevOps best practices.
+* Every Cloud Service Provider offers Kubernetes as a service, facilitating access to infrastructure and support services for various workloads, including AI/ML.
+* The Cloud Native Computing Foundation defines Cloud Native as empowering organizations to build scalable applications in modern environments using containers, microservices, and declarative APIs.
+* Cloud Native Artificial Intelligence (CNAI) is an evolving extension of Cloud Native, focusing on building and deploying AI applications and workloads using Cloud Native principles.
+
+### **Spelling and Grammar Check**
+
+* Select text, right-click, and choose "Fix spelling and grammar". The model will correct errors.
+
+![](obsidian-grammar.png)
+
+### **Extract Action Items**
+
+* For notes with multiple tasks, select the text and click "Find action items". The model will list the tasks.
+
+![](obsidian-extract.png)
+The Generated content are displayed below your own text:
+
+`Here are the action items extracted from the document in Markdown checkbox format:`
+
+
+* `[ ] Add feedback on WasmEdge Q3 Roadmap Discussion`
+* `[ ] Provide input on Update on WasmEdge Community Governance`
+* `[ ] Discuss any additional topics at the meeting (add to [https://docs.google.com/document/d/1iFlVl7R97Lze4RDykzElJGDjjWYDlkI8Rhf8g4dQ5Rk/edit#](https://docs.google.com/document/d/1iFlVl7R97Lze4RDykzElJGDjjWYDlkI8Rhf8g4dQ5Rk/edit))`
+
+`Let me know if you'd like me to help with anything else!`
+
+### **General Assistance**
+
+* Select any text and click "General help" to get contextually relevant information from the model.
+
+I entered and selected some information on KubeCon + CloudNativeCon + Open Source Summit + AI_dev China 2024.
+Because llama3 has not been trained with info on this conference, so the output is not very helpful: 
+
+`The information you're looking for is not present in this context.`
+
+`If you need to know the format and dates of KubeCon + CloudNativeCon + Open Source Summit + AI_dev China 2024, I suggest searching for official announcements or websites related to these events.`
+
+
+## Try it now!
+
+Ready to supercharge your note-taking with AI? Get started with the Obsidian-local-gpt plugin and your local LLM today:
+
+1. Set up the Obsidian-local-gpt plugin in your Obsidian app.
+2. Explore the various AI-powered features to enhance your productivity.
+
+Start your journey towards smarter, more efficient note-taking now!
+
+
+
+---
+File: /user-guide/openai-api/translation-agent.md
+---
+
+---
+sidebar_position: 6
+---
+
+# Translation Agent
+
+This LLM Translation Agent originally built by [Prof. Andrew Ng](https://www.linkedin.com/posts/andrewyng_github-andrewyngtranslation-agent-activity-7206347897938866176-5tDJ/) is designed to facilitate accurate and efficient translation across multiple languages. It employs open source LLMs (Large Language Models) to provide high-quality translations. You can use your own fine-tuned models or any LLMs on Hugging Face like Meta's Llama 3. This documentation shows how the Transgenic Agent utilizes the Gemma-2-9B model for translation.
+
+
+> For commands on starting and running this agent, refer to [GitHub - Second State/translation-agent](https://github.com/second-state/translation-agent/blob/use_llamaedge/step-by-step-use-LocalAI.md).
+
+
+## Prerequisites
+
+Follow [this guide](./intro.md) to run an open-source LLM locally.
+In this example, we need an open source LLM that is good at multiple languages.
+The Gemma-2 7B model from Google is a good choice here.
+
+```
+curl -LO https://huggingface.co/second-state/gemma-2-9b-it-GGUF/resolve/main/gemma-2-9b-it-Q5_K_M.gguf
+```
+
+Then start the LlamaEdge API server with the Gemma-2-9b model and name it `gemma-2-9b-it-Q5_K_M`.
+
+```
+wasmedge --dir .:. \
+    --nn-preload default:GGML:AUTO:gemma-2-9b-it-Q5_K_M.gguf \
+    --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+    llama-api-server.wasm \
+    --model-alias default,embedding \
+    --model-name gemma-2-9b-it-Q5_K_M,nomic-embed-text-v1.5.f16 \
+    --prompt-template gemma-instruct,embedding \
+    --batch-size 128,8192 \
+    --ctx-size 8192,8192
+```
+
+> See detailed instructions to [Run Gemma-2-9B on your own device.](https://www.secondstate.io/articles/gemma-2-9b/)
+
+## Clone the Translation Agent
+
+```
+git clone https://github.com/second-state/translation-agent.git
+    
+cd translation-agent
+git checkout use_llamaedge
+```
+
+## Configurations
+
+You will also need the following configurations and prerequisites to run the agent app.
+
+```
+export OPENAI_BASE_URL="http://localhost:8080/v1"
+export PYTHONPATH=${PWD}/src
+export OPENAI_API_KEY="LLAMAEDGE"
+
+pip install python-dotenv
+pip install openai tiktoken icecream langchain_text_splitters
+```
+
+## Run the Translation Agent on top of Gemma-2-9B
+
+Here we test a simple English to Spanish translation task to see the results so as to compare their translation capabilities. You will need to install [WasmEdge](https://github.com/WasmEdge/WasmEdge) and the [LlamaEdge API server](https://github.com/LlamaEdge/LlamaEdge) to run those models across major GPU and CPU platforms.
+
+Find the `examples/example_script.py` file in your cloned translation agent repo and review its code. It tells the agent where to find your document and how to translate it. Change the model name to the one you are using, here we’re using `gemma-2-9b` model; also change the source and target languages you want (here we put `English` as the source language and `Spanish` as the target language).
+
+Find a `examples/sample-texts` folder in your cloned repo. Put [the file you want to translate](https://hackmd.io/TXpN2sI4Tt6_Y33G65V0LQ?view#Source-Text) in this folder and get its path. Here because we named our [source text](https://hackmd.io/TXpN2sI4Tt6_Y33G65V0LQ?view#Source-Text) file `docker.txt`, the relative path to the document would be `sample-texts/docker.txt`.
+
+```
+import os
+
+import translation_agent as ta
+
+
+if __name__ == "__main__":
+    source_lang, target_lang, country = "English", "Spanish", "Spain"
+
+    relative_path = "sample-texts/docker.txt"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    full_path = os.path.join(script_dir, relative_path)
+
+    with open(full_path, encoding="utf-8") as file:
+        source_text = file.read()
+
+    print(f"Source text:\n\n{source_text}\n------------\n")
+
+    translation = ta.translate(
+        source_lang=source_lang,
+        target_lang=target_lang,
+        source_text=source_text,
+        country=country,
+        model="gemma-2-9b",
+    )
+
+    print(f"Translation:\n\n{translation}")
+```
+
+Run the below commands to have your text file translated into English.
+
+```
+cd examples    
+python example_script.py
+```
+
+Wait a few minutes and [the Spanish translation](https://hackmd.io/tdLiVR3TSc-8eVg_E-j9QA?view#English-Translation-by-Gemma-2-9B) will appear on your terminal screen.
+
+![](translation-agent.png)
+
+
+
+
+---
+File: /user-guide/server-side-rag/_category_.json
+---
+
+{
+  "label": "Long-term memory and knowledge",
+  "position": 20,
+  "link": {
+    "type": "generated-index"
+  }
+}
+
+
+
+---
+File: /user-guide/server-side-rag/markdown.md
+---
+
+---
+sidebar_position: 3
+---
+
+# Knowledge base from a markdown file
+
+In this section, we will discuss how to create a vector collection snapshot from a markdown file. The 
+snapshot file can then be loaded by a GaiaNet node as its knowledge base. 
+You will have the option to create a vector for each markdown section.
+
+## Prerequisites
+
+Install the WasmEdge Runtime, the cross-platform LLM runtime.
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s
+```
+
+Download an embedding model.
+
+```
+curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
+```
+
+The embedding model is a special kind of LLM that turns sentences into vectors. The vectors can then be stored in a vector database and searched later. When the sentences are from a body of text that represents a knowledge domain, that vector database becomes our RAG knowledge base. 
+
+## Start a vector database
+
+By default, we use Qdrant as the vector database. You can start a Qdrant instance on your server using Docker. The following command starts it in the background.
+
+```
+mkdir qdrant_storage
+mkdir qdrant_snapshots
+
+nohup docker run -d -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
+    -v $(pwd)/qdrant_snapshots:/qdrant/snapshots:z \
+    qdrant/qdrant
+```
+
+## Create the vector collection snapshot
+
+Delete the default collection if it exists.
+
+```
+curl -X DELETE 'http://localhost:6333/collections/default'
+```
+
+Create a new collection called default. Notice that it is 768 dimensions. That is the output vector size of the embedding model `nomic-embed-text-v1.5`. If you are using a different embedding model, you should use a dimension that fits the model.
+
+```
+curl -X PUT 'http://localhost:6333/collections/default' \
+  -H 'Content-Type: application/json' \
+  --data-raw '{
+    "vectors": {
+      "size": 768,
+      "distance": "Cosine",
+      "on_disk": true
+    }
+  }'
+```
+
+Download a program to chunk a document and create embeddings.
+
+```
+curl -LO https://github.com/GaiaNet-AI/embedding-tools/raw/main/markdown_embed/markdown_embed.wasm
+```
+
+It chunks the document based on markdown sections. You can check out the [Rust source code](https://github.com/GaiaNet-AI/embedding-tools/tree/main/markdown_embed) here and modify it if you need to use a different chunking strategy.
+
+Next, you can run the program by passing a collection name, vector dimension, and the source document. You can pass in the desired markdown heading level for chunking using the `--heading_level` option. The `--ctx_size` option matches the embedding model's context window size, which in this case is 8192 tokens allowing it to process long sections of text. Make sure that Qdrant is running on your local machine. The model is preloaded under the name embedding. The wasm app then uses the embedding model to create the 768-dimension vectors from `paris.md` and saves them into the default collection.
+
+```
+curl -LO https://huggingface.co/datasets/gaianet/paris/raw/main/paris.md
+
+wasmedge --dir .:. \
+  --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+  markdown_embed.wasm embedding default 768 paris.md --heading_level 1 --ctx_size 8192
+```
+
+## More options
+
+You can pass the following options to the program.
+
+* Using `-c` or `--ctx_size` to specify the context size of the input. This defaults to 512.
+* Using `-l` or `--heading_level` to specify the markdown heading level for each vector. This defaults to 1.
+* Using `-m` or `--maximum_context_length` to specify a context length in the CLI argument. That is to truncate and warn for each text segment that goes above the context length.
+* Using `-s` or `--start_vector_id` to specify the start vector ID in the CLI argument. This will allow us to run this app multiple times on multiple documents on the same vector collection.
+
+Example: the above example but to append the London guide to the end of an existing collection starting from index 42.
+
+```
+wasmedge --dir .:. \
+  --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+   markdown_embed.wasm embedding default 768 london.md -c 8192 -l 1 -s 42
+```
+
+## Create a vector snapshot
+
+You can create a snapshot of the collection, which can be shared and loaded into a different Qdrant database. You can find the snapshot file in the `qdrant_snapshots` directory.
+
+```
+curl -X POST 'http://localhost:6333/collections/default/snapshots'
+```
+
+Have fun!
+
+
+
+---
+File: /user-guide/server-side-rag/quick-start.md
+---
+
+---
+sidebar_position: 1
+---
+
+# Long-term memory for the LLM
+
+The LLM app requires both long-term and short-term memories. Long-term memory includes factual knowledge, historical facts, background stories etc. They are best added to the context as complete chapters instead of small chunks of text to maintain the internal consistency of the knowledge.  
+
+[RAG](https://blogs.nvidia.com/blog/what-is-retrieval-augmented-generation/) 
+is an important technique to inject contextual knowledge into an LLM application. It improves accuracy and reduces the hallucination of LLMs.
+An effective RAG application combines real-time and user-specific short-term memory (chunks) with stable long-term memory (chapters) in the prompt context. 
+
+Since the application's long-term memory is stable (even immutable), we package it in a vector database tightly coupled with the LLM. The client app assembles the short-term memory in the prompt and is supplemented with the long-term memory on the LLM server. We call the approach "server-side RAG".
+
+> The long context length supported by modern LLMs are especially well suited for long term knowledge that are best represented by chapters of text.
+
+The LlamaEdge API server provides application components that developers can reuse to 
+supplement the LLM with long-term memories. 
+We have built this feature into the [rag-api-server](https://github.com/LlamaEdge/rag-api-server) project. 
+The result is an OpenAI
+compatible LLM service that is grounded by long-term knowledge on the server side. The client application
+can simply chat with it or provide realtime / short-term memory since the LLM is already aware of the 
+domain or background.
+
+## Prerequisites
+
+Install the [WasmEdge Runtime](https://github.com/WasmEdge/WasmEdge), our cross-platform LLM runtime.
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s
+```
+
+Download the pre-built binary for the LlamaEdge API server with RAG support.
+
+```
+curl -LO https://github.com/LlamaEdge/rag-api-server/releases/latest/download/rag-api-server.wasm
+```
+
+And the chatbot web UI for the API server.
+
+```
+curl -LO https://github.com/second-state/chatbot-ui/releases/latest/download/chatbot-ui.tar.gz
+tar xzf chatbot-ui.tar.gz
+rm chatbot-ui.tar.gz
+```
+
+Download a chat model and an embedding model.
+
+```
+# The chat model is Llama3 8b chat
+curl -LO https://huggingface.co/second-state/Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf
+
+# The embedding model is nomic-embed-text-v1.5
+curl -LO https://huggingface.co/second-state/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
+```
+
+The embedding model is a special kind of LLM that turns sentences into vectors. The vectors can then be stored in a vector database and searched later. When the sentences are from a body of text that represents a knowledge domain, that vector database becomes our RAG knowledge base.
+
+## Prepare a vector database
+
+By default, we use Qdrant as the vector database. You can start a Qdrant instance on your server using Docker. The following command starts it in the background.
+
+```
+mkdir qdrant_storage
+mkdir qdrant_snapshots
+
+nohup docker run -d -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
+    -v $(pwd)/qdrant_snapshots:/qdrant/snapshots:z \
+    qdrant/qdrant
+```
+
+Delete the `default` collection if it exists.
+
+```
+curl -X DELETE 'http://localhost:6333/collections/default'
+```
+
+Next, download a knowledge base, which is in the form of a vector snapshot. For example, here is an vector snapshot
+created from a guidebook for Paris. It is a 768-dimension vector collection created by the embedding model [nomic-embed-text](https://huggingface.co/second-state/Nomic-embed-text-v1.5-Embedding-GGUF), which you have already downloaded.
+
+```
+curl -LO https://huggingface.co/datasets/gaianet/paris/resolve/main/paris_768_nomic-embed-text-v1.5-f16.snapshot
+```
+
+> You can create your own vector snapshots using tools discussed in the next several chapters.
+
+Import the vector snapshot file into the local Qdrant database server's `default` collection.
+
+```
+curl -s -X POST http://localhost:6333/collections/default/snapshots/upload?priority=snapshot \
+    -H 'Content-Type:multipart/form-data' \
+    -F 'snapshot=@paris_768_nomic-embed-text-v1.5-f16.snapshot'
+```
+
+## Start the API server
+
+Let's start the LlamaEdge RAG API server on port 8080. By default, it connects to the local Qdrant server.
+
+```
+wasmedge --dir .:. \
+   --nn-preload default:GGML:AUTO:Meta-Llama-3-8B-Instruct-Q5_K_M.gguf \
+   --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5-f16.gguf \
+   rag-api-server.wasm -p llama-3-chat,embedding --web-ui ./chatbot-ui \
+     --model-name Meta-Llama-3-8B-Instruct-Q5_K_M,nomic-embed-text-v1.5-f16 \
+     --ctx-size 8192,8192 \
+     --batch-size 128,8192 \
+     --rag-prompt "Use the following context to answer the question.\n----------------\n" \
+     --log-prompts --log-stat
+```
+
+The CLI arguments are self-explanatory.
+Notice that those arguments are different from the [llama-api-server.wasm](https://github.com/LlamaEdge/LlamaEdge/tree/main/api-server) app.
+
+* The `--nn-proload` loads two models we just downloaded. The chat model is named `default` and the embedding model is named `embedding` .
+* The `rag-api-server.wasm` is the API server app. It is written in Rust using LlamaEdge SDK, and is already compiled to cross-platform Wasm binary.
+* The `--model-name` specifies the names of those two models so that API calls can be routed to specific models.
+* The `--ctx-size` specifies the max input size for each of those two models listed in `--model-name`.
+* The `--batch-size` specifies the batch processing size for each of those two models listed in `--model-name`. This parameter has a large impact on the RAM use of the API server.
+* The `--rag-prompt` specifies the system prompt that introduces the context of the vector search and returns relevant context from qdrant.
+
+There are a few optional `--qdrant-*` arguments you could use.
+
+* The `--qdrant-url` is the API URL to the Qdrant server that contains the vector collection. It defaults to `http://localhost:6333`.
+* The `--qdrant-collection-name` is the name of the vector collection that contains our knowledge base. It defaults to `default`.
+* The `--qdrant-limit` is the maximum number of text chunks (search results) we could add to the prompt as the RAG context. It defaults to `3`.
+* The `--qdrant-score-threshold` is the minimum score a search result must reach for its corresponding text chunk to be added to the RAG context. It defaults to `0.4`.
+
+## Chat with supplemental knowledge
+
+Just go to `http://localhost:8080/` from your web browser, and you will see a chatbot UI web page. You can now
+ask any question about Paris and it will answer based on the Paris guidebook in the Qdrant database!
+
+> This is a local web server serving a local LLM with contextual knowledge from a local vector database. Nothing leaves your computer!
+
+Or, you can access it via the API. 
+
+```
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"system", "content": "You are a helpful assistant."}, {"role":"user", "content": "Where is Paris?"}]}'
+
+{
+  "id":"18511d0f-b760-437f-a87f-8e95645822a0",
+  "object":"chat.completion",
+  "created":1711519741,
+  "model":"Meta-Llama-3-8B-Instruct-Q5_K_M",
+  "choices":[{"index":0,
+    "message":{"role":"assistant","content":"Based on the provided context, Paris is located in the north-central part of France, situated along the Seine River. According to the text, people were living on the site of the present-day city by around 7600 BCE, and the modern city has spread from the island (the Île de la Cité) and far beyond both banks of the Seine."},
+  "finish_reason":"stop"}],"usage":{"prompt_tokens":387,"completion_tokens":80,"total_tokens":467}
+}
+```
+
+## Next steps
+
+Now it is time to build your own LLM API server with long-term memory! You can start by using the same embedding model but with a different document. 
+
+Good luck!
+
+
+
+---
+File: /user-guide/server-side-rag/rag-service.md
+---
+
+---
+sidebar_position: 4
+---
+
+# Use the API server
+
+The LlamaEdge RAG API server provides an API endpoint `/create/rag` that takes a text file, segments it into small chunks, turns the chunks into embeddings (i.e., vectors), and then stores the embeddings into the Qdrant database.
+It provides an easy way to quick generate embeddings from a body text into a Qdrant database collection.
+
+## Prerequisites
+
+You will need to follow [this guide](quick-start) to start a Qdrant database instance and a local `llama-api-server.wasm` server.
+
+Delete the `default` collection if it exists. 
+
+```
+curl -X DELETE 'http://localhost:6333/collections/default'
+```
+
+## Step by step example
+
+In this example, we will use a text document `paris.txt`, and simply submit it to the LlamaEdge API server.
+
+```
+curl -LO https://huggingface.co/datasets/gaianet/paris/raw/main/paris.txt
+
+curl -X POST http://127.0.0.1:8080/v1/create/rag -F "file=@paris.txt"
+```
+
+Now, the Qdrant database has a vector collection called `default` which contains embeddings from the Paris guide. You can see the stats of the vector collection as follows.
+
+```
+curl 'http://localhost:6333/collections/default'
+```
+
+Of course, the `/create/rag` API is rather primitive in chunking documents and creating embeddings. For many use cases, you should [create your own embedding vectors](text).
+
+> The `/create/rag` is a simple combination of [several more basic API endpoints](../../developer-guide/create-embeddings-collection.md) provided by the API server. You can learn more about them in the developer guide.
+
+Have fun!
+
+
+
+---
+File: /user-guide/server-side-rag/text.md
+---
+
+---
+sidebar_position: 2
+---
+
+# Knowledge base from a plain text file
+
+In this section, we will discuss how to create a vector collection snapshot from a plain text file. The 
+snapshot file can then be loaded by a GaiaNet node as its knowledge base. 
+
+The text file is segmented into multiple chunks by blank lines. Each chunk is turned into a vector, and when 
+retrieved, added to he prompt context for the LLM.
+
+## Prerequisites
+
+Install the WasmEdge Runtime, the cross-platform LLM runtime.
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh | bash -s -- --plugins wasi_nn-ggml
+```
+
+Download a chat model and an embedding model.
+
+```
+curl -LO https://huggingface.co/gaianet/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-ggml-model-f16.gguf
+```
+
+The embedding model is a special kind of LLM that turns sentences into vectors. The vectors can then be stored in a vector database and searched later. When the sentences are from a body of text that represents a knowledge domain, that vector database becomes our RAG knowledge base. 
+
+## Start a vector database
+
+By default, we use Qdrant as the vector database. You can start a Qdrant instance on your server using Docker. The following command starts it in the background.
+
+```
+mkdir qdrant_storage
+mkdir qdrant_snapshots
+
+nohup docker run -d -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
+    -v $(pwd)/qdrant_snapshots:/qdrant/snapshots:z \
+    qdrant/qdrant
+```
+
+## Create the vector collection snapshot
+
+Delete the default collection if it exists.
+
+```
+curl -X DELETE 'http://localhost:6333/collections/default'
+```
+
+Create a new collection called default. Notice that it is 384 dimensions. That is the output vector size of the embedding model `all-MiniLM-L6-v2`. If you are using a different embedding model, you should use a dimension that fits the model.
+
+```
+curl -X PUT 'http://localhost:6333/collections/default' \
+  -H 'Content-Type: application/json' \
+  --data-raw '{
+    "vectors": {
+      "size": 384,
+      "distance": "Cosine",
+      "on_disk": true
+    }
+  }'
+```
+
+Download a program to chunk a document and create embeddings.
+
+```
+curl -LO https://github.com/GaiaNet-AI/embedding-tools/raw/main/paragraph_embed/paragraph_embed.wasm
+```
+
+It chunks the document based on empty lines. So, you MUST prepare your source document this way -- segment the document into sections of around 200 words with empty lines. You can check out the [Rust source code here](https://github.com/GaiaNet-AI/embedding-tools/tree/main/paragraph_embed) and modify it if you need to use a different chunking strategy.
+
+> The `paragraph_embed.wasm` program would NOT break up code listings even if there are empty lines with in the listing.
+
+Next, you can run the program by passing a collection name, vector dimension, and the source document. Make sure that Qdrant is running on your local machine. The model is preloaded under the name embedding. The wasm app then uses the embedding model to create the 384-dimension vectors from `paris_chunks.txt` and saves them into the default collection.
+
+```
+curl -LO https://huggingface.co/datasets/gaianet/paris/raw/main/paris_chunks.txt
+
+wasmedge --dir .:. \
+  --nn-preload embedding:GGML:AUTO:all-MiniLM-L6-v2-ggml-model-f16.gguf \
+  paragraph_embed.wasm embedding default 384 paris_chunks.txt
+```
+
+## More options
+
+You can also pass the following options to the program.
+
+* Using `-m` or `--maximum_context_length` to specify a context length in the CLI argument. That is to truncate and warn for each text segment that goes above the context length.
+* Using `-s` or `--start_vector_id` to specify the start vector ID in the CLI argument. This will allow us to run this app multiple times on multiple documents on the same vector collection.
+* Using `-c` or `--ctx_size` to specify the context size of the input. This defaults to 512.
+
+Example: use the `nomic-embed-text-v1.5.f16` model, which has a context length of 8192 and vector size of 768, to create embeddings for long paragraphs of text. Note that your `default` vector collection must be set up to be 768 dimensions.
+
+```
+curl -LO https://huggingface.co/gaianet/Nomic-embed-text-v1.5-Embedding-GGUF/resolve/main/nomic-embed-text-v1.5.f16.gguf
+
+wasmedge --dir .:. \
+  --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+   paragraph_embed.wasm embedding default 768 paris.txt -c 8192
+```
+
+Example: the above example but to append the London guide to the end of an existing collection starting from index 42.
+
+```
+wasmedge --dir .:. \
+  --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+   paragraph_embed.wasm embedding default 768 london.txt -c 8192 -s 42
+```
+
+
+## Create a vector snapshot
+
+You can create a snapshot of the collection, which can be shared and loaded into a different Qdrant database. You can find the snapshot file in the `qdrant_snapshots` directory.
+
+```
+curl -X POST 'http://localhost:6333/collections/default/snapshots'
+```
+
+Have fun!
+
+
+
+---
+File: /user-guide/_category_.json
+---
+
+{
+  "label": "User Guide",
+  "position": 5,
+  "link": {
+    "type": "generated-index"
+  }
+}
+
+
+
+---
+File: /user-guide/api-reference.md
+---
+
+---
+sidebar_position: 8
+---
+
+# API Reference
+
+## Introduction
+
+LlamaEdge is an OpenAI compatibale API server. You
+can also replace the OpenAI API configuration with the LlamaEdge API server in other AI agent frameworks.
+
+The base URL to send all API requests is `http://localhost:8080/v1`.
+
+## Endpoints
+
+### Chat
+
+The `chat/completions` endpoint returns an LLM response based on the system prompt and user query.
+
+#### Non-streaming
+
+By default, the API responds with a full answer in the HTTP response. 
+
+**Request**
+
+```
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H 'accept:application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"system", "content": "You are a helpful assistant."}, {"role":"user", "content": "What is the capital of Singapore?"}], "model": "model_name"}'
+```
+
+**Response:**
+
+```
+{"id":"chatcmpl-bcfeebe0-3342-42c0-ac92-0615213e1c97","object":"chat.completion","created":1716380086,"model":"Llama-3-8B-Instruct","choices":[{"index":0,"message":{"role":"assistant","content":"Singapore."},"finish_reason":"stop"}],"usage":{"prompt_tokens":61,"completion_tokens":4,"total_tokens":65}}%  
+```
+
+#### streaming
+
+Add `"stream":true` in your request to make the API send back partial responses as the LLM generates its answer. 
+
+**Request:**
+
+```
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H 'accept:application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"system", "content": "You are a helpful assistant."}, {"role":"user", "content": "What is the capital of France?"}], "model": "model_name", "stream":true}'
+```
+
+**Response:**
+
+```
+data: {"id":"chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4","choices":[{"index":0,"delta":{"role":"assistant","content":"I"},"logprobs":null,"finish_reason":null}],"created":1716381054,"model":"Llama-3-8B-Instruct","system_fingerprint":"fp_44709d6fcb","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4","choices":[{"index":0,"delta":{"role":"assistant","content":" am"},"logprobs":null,"finish_reason":null}],"created":1716381054,"model":"Llama-3-8B-Instruct","system_fingerprint":"fp_44709d6fcb","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4","choices":[{"index":0,"delta":{"role":"assistant","content":" a"},"logprobs":null,"finish_reason":null}],"created":1716381054,"model":"Llama-3-8B-Instruct","system_fingerprint":"fp_44709d6fcb","object":"chat.completion.chunk"}
+
+...
+
+data: {"id":"chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4","choices":[{"index":0,"delta":{"role":"assistant","content":" an"},"logprobs":null,"finish_reason":null}],"created":1716381055,"model":"Llama-3-8B-Instruct","system_fingerprint":"fp_44709d6fcb","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4","choices":[{"index":0,"delta":{"role":"assistant","content":" AI"},"logprobs":null,"finish_reason":null}],"created":1716381055,"model":"Llama-3-8B-Instruct","system_fingerprint":"fp_44709d6fcb","object":"chat.completion.chunk"}
+
+data: {"id":"chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4","choices":[{"index":0,"delta":{"role":"assistant","content":"."},"logprobs":null,"finish_reason":null}],"created":1716381055,"model":"Llama-3-8B-Instruct","system_fingerprint":"fp_44709d6fcb","object":"chat.completion.chunk"}
+
+data: [DONE]
+```
+
+#### Request body
+
+| Field             | Type    | Required | Description                                                                                                                                                                                                                                                                                               | Default | Example                                                                                                                                                                                                                                                |
+|-------------------|---------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| messages          | List    | Required | A list of messages for the conversation.<br/>1 . System message (depends on the large language mode you use) <br/>* `content` of the system messages is required <br/> * `"role":"system"` is required<br/> 2. User message (required) <br/> * `content` is required. <br/> * `"role":"user"` is required | N/A     | "messages": &#91;&quot;role&quot;&#58; &quot;system&quot;&#44;&quot;content&quot;&#58; &quot;You are a helpful assistant.&quot;&#125;&#44;&#123;&quot;role&quot;&#58; &quot;user&quot;&#44;<br/>&quot;content&quot;&#58; &quot;Hello!&quot;&#125;&#93; |
+| model             | String  | Required | The chat model you used                                                                                                                                                                                                                                                                                   | N/A     | Llama-3-8B-262k-Q5_K_M                                                                                                                                                                                                                                 |
+| top_p             | Number  | Optional | An alternative to sampling with temperature. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.                                                                                                                            | 1       | Number between 0 and 1.                                                                                                                                                                                                                                |
+| Temperature       | Number  | Optional | Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.                                                                                                                                                                         | 1       | Number between 0 and 2.                                                                                                                                                                                                                                |
+| presence_penalty  | Number  | Optional | Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.                                                                                                                                                          | 0       | Number between -2.0 and 2.0.                                                                                                                                                                                                                           |
+| stream            | boolean | Optional | Make the answer streaming output                                                                                                                                                                                                                                                                          | FALSE   | "stream":true                                                                                                                                                                                                                                          |
+| frequency_penalty | Number  | Optional | Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood of repeating the same line verbatim.                                                                                                                                          | 0       | Number between -2.0 and 2.0.                                                                                                                                                                                                                           |
+
+#### Response body
+
+| Field   | Type    | Streaming or non-streaming | Description                                                                                                | Default                                                                                          | Example                                                                                                                                                                                                                                      |
+|---------|---------|----------------------------|------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| id      | string  | Both                       | A unique identifier for the chat completion.                                                               | Generated randomly                                                                               | chatcmpl-73a1f57d-185e-42c2-b8a6-ba0bae58f3b4                                                                                                                                                                                                |
+| object  | string  | Both                       | The object type                                                                                            | `chat.completion.chunk` in the streaming mode.<br/> `chat.completion` in the non-streaming mode. | `chat.completion.chunk` in the streaming mode.<br/> `chat.completion` in the non-streaming mode.                                                                                                                                             |
+| choices | array   | Both                       | A list of chat completion choices.                                                                         |                                                                                                  | "choices":&#91;&#123;&quot;index&quot;&#58;0&#44;&quot;message&quot;&#58;&#123;&quot;role&quot;&#58;&quot;assistant&quot;&#44;&quot;content&quot;&#58;&quot;Paris.&quot;&#125;&#44;&quot;finish_reason&quot;&#58;&quot;stop&quot;&#125;&#93; |
+| created | integer | Both                       | The Unix timestamp (in seconds) of when the chat completion was created.                                   | N/A                                                                                              | 1716380086                                                                                                                                                                                                                                   |
+| model   | string  | Both                       | The model used for the chat completion.                                                                    | Depends on the model you use.                                                                    | Llama-3-8B-Instruct-Q5_K_M                                                                                                                                                                                                                   |
+| usage   | object  | Both                       | Usage statistics for the completion request, including completion_tokens, prompt_tokens, and total_tokens. | N/A                                                                                              | "usage":&#123;&quot;prompt_tokens&quot;&#58;61&#44;&quot;completion_tokens&quot;&#58;4&#44;&quot;total_tokens&quot;&#58;65&#125;                                                                                                             |
+
+### Embedding
+
+The `embeddings` endpoint computes embeddings for user queries or file chunks.
+
+**Request**
+
+```
+curl -X POST http://localhost:8080/v1/embeddings \
+    -H 'accept:application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"model": "nomic-embed-text-v1.5.f16", "input":["Paris, city and capital of France, ..., for Paris has retained its importance as a centre for education and intellectual pursuits.", "Paris’s site at a crossroads ..., drawing to itself much of the talent and vitality of the provinces."]}'
+```
+
+**Response:**
+
+```
+{
+    "object": "list",
+    "data": [
+        {
+            "index": 0,
+            "object": "embedding",
+            "embedding": [
+                0.1428378969,
+                -0.0447309874,
+                0.007660218049,
+                ...
+                -0.0128974719,
+                -0.03543198109,
+                0.03974733502,
+                0.00946635101,
+                -0.01531364303
+            ]
+        },
+        {
+            "index": 1,
+            "object": "embedding",
+            "embedding": [
+                0.0697753951,
+                -0.0001159032545,
+                0.02073983476,
+                ...
+                0.03565846011,
+                -0.04550019652,
+                0.02691745944,
+                0.02498772368,
+                -0.003226313973
+            ]
+        }
+    ],
+    "model": "nomic-embed-text-v1.5.f16",
+    "usage": {
+        "prompt_tokens": 491,
+        "completion_tokens": 0,
+        "total_tokens": 491
+    }
+}
+```
+
+### Retrieve
+
+The `retrieve` endpoint can retrieve text from the model's vector collection based on the user's query.
+
+**Request:**
+
+```
+curl -X POST http://localhost:8080/v1/retrieve \
+    -H 'accept:application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"messages":[{"role":"system", "content": "You are a helpful assistant."}, {"role":"user", "content": "What is the location of Paris?"}], "model":"nomic-embed-text-v1.5.f16"}'
+```
+
+**Response:**
+
+```
+{
+    "points": [
+        {
+            "source": "\"Paris is located in northern central France, in a north-bending arc of the river Seine whose crest includes two islands, the Île Saint-Louis and the larger Île de la Cité, which form the oldest part of the city. The river's mouth on the English Channel is about 233 mi downstream from the city. The city is spread widely on both banks of the river. Overall, the city is relatively flat, and the lowest point is 35 m above sea level. Paris has several prominent hills, the highest of which is Montmartre at 130 m.\\n\"",
+            "score": 0.74011195
+        },
+        {
+            "source": "\"The Paris region is the most active water transport area in France, with most of the cargo handled by Ports of Paris in facilities located around Paris. The rivers Loire, Rhine, Rhône, Me\\n\"",
+            "score": 0.63990676
+        },
+        {
+            "source": "\"Paris\\nCountry\\tFrance\\nRegion\\nÎle-de-France\\r\\nDepartment\\nParis\\nIntercommunality\\nMétropole du Grand Paris\\nSubdivisions\\n20 arrondissements\\nGovernment\\n • Mayor (2020–2026)\\tAnne Hidalgo (PS)\\r\\nArea\\n1\\t105.4 km2 (40.7 sq mi)\\n • Urban\\n (2020)\\t2,853.5 km2 (1,101.7 sq mi)\\n • Metro\\n (2020)\\t18,940.7 km2 (7,313.0 sq mi)\\nPopulation\\n (2023)\\n2,102,650\\n • Rank\\t9th in Europe\\n1st in France\\r\\n • Density\\t20,000/km2 (52,000/sq mi)\\n • Urban\\n (2019)\\n10,858,852\\n • Urban density\\t3,800/km2 (9,900/sq mi)\\n • Metro\\n (Jan. 2017)\\n13,024,518\\n • Metro density\\t690/km2 (1,800/sq mi)\\nDemonym(s)\\nParisian(s) (en) Parisien(s) (masc.), Parisienne(s) (fem.) (fr), Parigot(s) (masc.), \\\"Parigote(s)\\\" (fem.) (fr, colloquial)\\nTime zone\\nUTC+01:00 (CET)\\r\\n • Summer (DST)\\nUTC+02:00 (CEST)\\r\\nINSEE/Postal code\\t75056 /75001-75020, 75116\\r\\nElevation\\t28–131 m (92–430 ft)\\n(avg. 78 m or 256 ft)\\nWebsite\\twww.paris.fr\\r\\n1 French Land Register data, which excludes lakes, ponds, glaciers > 1 km2 (0.386 sq mi or 247 acres) and river estuaries.\\n\"",
+            "score": 0.62259054
+        },
+        {
+            "source": "\" in Paris\\n\"",
+            "score": 0.6152092
+        },
+        {
+            "source": "\"The Parisii, a sub-tribe of the Celtic Senones, inhabited the Paris area from around the middle of the 3rd century BC. One of the area's major north–south trade routes crossed the Seine on the île de la Cité, which gradually became an important trading centre. The Parisii traded with many river towns (some as far away as the Iberian Peninsula) and minted their own coins.\\n\"",
+            "score": 0.5720232
+        }
+    ],
+    "limit": 5,
+    "score_threshold": 0.4
+}
+```
+
+### Get the model
+
+The `models` endpoint provides the chat and embedding models that are available on your local port.
+
+**Request:**
+
+```
+curl -X POST http://localhost:8080/v1/models
+```
+
+**Response:**
+
+```
+{"object":"list","data":[{"id":"Llama-3-8B-Instruct","created":1716383261,"object":"model","owned_by":"Not specified"},{"id":"nomic-embed-text-v1.5.f16","created":1716383261,"object":"model","owned_by":"Not specified"}]}%   
+```
+
+
+
+## Status Codes
+
+| HTTP response code | Description           | Reason                      | Solutions                        |
+|--------------------|-----------------------|-----------------------------|----------------------------------|
+| 404                | Not found             | The endpoint URL is invalid | Please check the endpoint URL    |
+| 500                | Internal Server Error | Model is not found.         | Please check out the model name. |
+| 400                | Bad request           |                             |                                  |
+
+
+
+
+---
+File: /user-guide/get-started-with-llamaedge.md
+---
+
+---
+sidebar_position: 2
+---
+
+# LlamaEdge step-by-step
+
+Let's dive into a simple and practical tutorial on getting started with LlamaEdge, focusing on how to use a Command Line Interface (CLI) installer to run a model, along with some useful WasmEdge commands. This guide can be adjusted and applied to run Llama 2 series of models, tailored to give you a hands-on approach to running your large language model with LlamaEdge.
+
+### Step 1: Install WasmEdge
+
+First off, you'll need WasmEdge, a high-performance, lightweight, and extensible WebAssembly (Wasm) runtime optimized for server-side and edge computing. To install WasmEdge along with the necessary plugin for AI inference, open your terminal and execute the following command:
+
+```
+curl -sSf https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s
+```
+
+This command fetches and runs the WasmEdge installation script, which automatically installs WasmEdge and the WASI-NN plugin, essential for running LLM models like Llama 3.
+
+### Step 2: Download the LLM model
+
+Next, you'll need to obtain a model file. For this tutorial, we're focusing on the **Llama 3 8B model finetuned for instruction following**, but the steps are generally applicable to other models too. Use the following command to download the model file.
+
+```
+curl -LO https://huggingface.co/second-state/Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf
+```
+
+This command downloads the Llama-3-8B-Instruct model from Huggingface, an AI model hosting platform.
+
+### Step 3: Download a portable chatbot app
+
+Next, you need an application that can load the model and provide a UI to interact with the model.
+The [LlamaEdge CLI chat app](https://github.com/LlamaEdge/LlamaEdge/tree/main/chat) is a lightweight and cross-platform Wasm app that works on any device
+you might have. Just download the compiled binary app.
+
+```
+curl -LO https://github.com/second-state/LlamaEdge/releases/latest/download/llama-chat.wasm
+```
+
+> The LlamaEdge apps are written in Rust and compiled to portable Wasm. That means they can run across devices and OSes without any change to the binary apps. You can simply download and run the compiled wasm apps regardless of your platform.
+
+### Step 4: Chat with the Model
+
+With everything set up, it's time to run the chat app with the LLM model as follows.
+
+```
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:Meta-Llama-3-8B-Instruct-Q5_K_M.gguf llama-chat.wasm -p llama-3-chat
+```
+
+This command executes the chat application, allowing you to start interacting with the Llama 3 8B model. Here, `wasmedge` is the command to run the WasmEdge runtime, `--nn-preload` specifies the model to use with the WASI-NN plugin, and `-p` sets the prompt template for the chat.
+
+### Step 5: Chat with the chatbot UI 
+
+The command line UI is nice, but most people would prefer a web UI. The web UI also allows you to make your
+local LLM accessible to other people across the network.
+To do that, you need the [LlamaEdge API server](https://github.com/LlamaEdge/LlamaEdge/tree/main/api-server) app.
+
+```
+curl -LO https://github.com/second-state/LlamaEdge/releases/latest/download/llama-api-server.wasm
+```
+
+The `llama-api-server.wasm` is a web server with an OpenAI compatible API. You still need HTML files for the chatbot UI.
+Download and unzip the HTML UI files as follows.
+
+```
+curl -LO https://github.com/LlamaEdge/chatbot-ui/releases/latest/download/chatbot-ui.tar.gz
+tar xzf chatbot-ui.tar.gz
+rm chatbot-ui.tar.gz
+```
+
+Then, start the web server.
+
+```
+wasmedge --dir .:. --nn-preload default:GGML:AUTO:Meta-Llama-3-8B-Instruct-Q5_K_M.gguf llama-api-server.wasm -p llama-3-chat
+```
+
+Go to `http://localhost:8080` on your computer to access the chatbot UI on a web page!
+
+Congratulations! You have now started an LLM app on your own device. But if you are interested in running an agentic app beyond the simple chatbot, you will need to start an API server for this LLM along with the embedding model. Check out [this guide on how to do it](./openai-api/intro.md)!
+
+
+
+
+---
+File: /user-guide/llamaedge-docker.md
+---
+
+---
+sidebar_position: 30
+---
+
+# Use LlamaEdge in Docker
+
+You can run all the commands in this document without any change on any machine with the latest Docker and at least 8GB of RAM available to the container.
+By default, the container uses the CPU to peform computations, which could be slow for large LLMs. For GPUs,
+
+* Mac: Everything here works on [Docker Desktop for Mac](https://docs.docker.com/desktop/install/mac-install/). However, the Apple GPU cores will not be available inside Docker containers.
+* Windows and Linux with Nvidia GPU: You will need to install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installation) for Docker. In the instructions below, replace the `latest` tag with `cuda12` or `cuda11`, and add the `--device nvidia.com/gpu=all` flag, to use take advantage of the GPU. If you need to build the images yourself, replace `Dockerfile` with `Dockerfile.cuda12` or `Dockerfile.cuda11`.
+
+## Quick start
+
+Run the following Docker command to start an OpenAI-compatible LLM API server on your own device.
+
+```
+docker run --rm -p 8080:8080 --name api-server secondstate/qwen-2-0.5b-allminilm-2:latest
+```
+
+Go to http://localhost:8080 from your browser to chat with the model!
+
+This container starts two models Qwen-2-0.5B is a very small but highly capable LLM chat model, and all-miniLM is 
+a widely used embedding model. 
+That allows the API server to support both `/chat/completions` and `/embeddings` endpoints, which are crucial for most
+LLM agent apps and frameworks based on OpenAI.
+
+Alternatively, you can use the command below to start a server on an Nvidia CUDA 12 machine.
+
+```
+docker run --rm -p 8080:8080 --device nvidia.com/gpu=all --name api-server secondstate/qwen-2-0.5b-allminilm-2:cuda12
+```
+
+You can make an OpenAI style API request as follows.
+
+```
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"system", "content": "You are a helpful assistant."}, {"role":"user", "content": "Where is Paris?"}]}'
+```
+
+Or, make an embedding request to turn a collection of text paragraphs into vectors. It is required for many RAG apps.
+
+```
+curl -X POST http://localhost:8080/v1/embeddings \
+    -H 'accept:application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"model":"all-MiniLM-L6-v2-ggml-model-f16.gguf", "input":["Paris is the capital of France.","Paris occupies a central position in the rich agricultural region of 890 square miles (2,300 square km).","The population of Paris is 2,145,906"]}'
+```
+
+Stop and remove the container once you are done.
+
+```
+docker stop api-server
+```
+
+## Specify context window sizes
+
+The memory consumption of the container is dependent on the context size you give to the model. You can specify the context size by appending two arguments at the end of the command. The following command starts the container with a context window of 1024 tokens for the chat LLM and a context window of 256 tokens for the embedding model. 
+
+```
+docker run --rm -p 8080:8080 --name api-server secondstate/qwen-2-0.5b-allminilm-2:latest ctx-size 1024 256
+```
+
+Each model comes with a maximum context size it can support. Your custom context size should not exceed that. Please refer to model documentation for this information. 
+
+> If you set the embedding context size (i.e., the last argument in the above command) to 0, the container would load the chat LLM only.
+
+## Build your own image
+
+You can build nad publish a Docker image to use any models you like. First, download the model files (must be in GGUF format) you want from Huggingface. 
+Of course, you could also your private finetuned model files here. 
+
+```
+curl -LO https://huggingface.co/second-state/Qwen2-0.5B-Instruct-GGUF/resolve/main/Qwen2-0.5B-Instruct-Q5_K_M.gguf
+curl -LO https://huggingface.co/second-state/All-MiniLM-L6-v2-Embedding-GGUF/resolve/main/all-MiniLM-L6-v2-ggml-model-f16.gguf
+```
+
+Build a multi-platform image by passing the model files as `--build-arg`. The `PROMPT_TEMPLATE` is the specific text format the chat model is trained on to follow conversations. It differs for each model, and you will need to special attention. For all models published by the second-state organization, you can find the prompt-template in the model card. 
+
+```
+docker buildx build . --platform linux/arm64,linux/amd64 \
+  --tag secondstate/qwen-2-0.5b-allminilm-2:latest -f Dockerfile \
+  --build-arg CHAT_MODEL_FILE=Qwen2-0.5B-Instruct-Q5_K_M.gguf \
+  --build-arg EMBEDDING_MODEL_FILE=all-MiniLM-L6-v2-ggml-model-f16.gguf \
+  --build-arg PROMPT_TEMPLATE=chatml
+```
+
+Once it is built, you can publish it to Docker Hub.
+
+```
+docker login
+docker push secondstate/qwen-2-0.5b-allminilm-2:latest
+```
+
+## What's next
+
+Use the container as a drop-in replacement for the OpenAI API for your favorite agent app or framework! [See some examples here](openai-api/intro.md). 
+
+
+
+
+---
+File: /user-guide/llamaedge-kubernetes.md
+---
+
+---
+sidebar_position: 31
+---
+
+# Use LlamaEdge in Kubernetes
+
+Coming soon.
+
+
+
+---
+File: /user-guide/quick-start-command.md
+---
+
+---
+sidebar_position: 1
+---
+
+# Quick Start
+
+LlamaEdge is a suite of component libraries and command line tools for developers to embed and run LLMs in their own apps. The best way to quickly experience LlamaEdge is to use easy-to-use utilities built on top of it.
+
+## Quick Start with Gaia
+
+Gaia is an integrated tool for running open-source LLMs. It is built on LlamaEdge. Following these simple commands, you will be able to get an Internet-accessible chatbot and an OpenAI-compatible API server running on your devices using any open-source model you choose in a few minutes.
+
+Install the Gaia software with a single command on Mac, Linux, or Windows WSL.
+
+```bash
+curl -sSfL 'https://github.com/GaiaNet-AI/gaianet-node/releases/latest/download/install.sh' | bash
+```
+
+Then, follow the prompt on your screen to set up the environment path. The command line will begin with `source`.
+
+Use `gaianet init` to download the model files and vector database files specified in the `$HOME/gaianet/config.json` file, and it could take a few minutes since the files are large.
+
+```bash
+gaianet init
+```
+
+> The default `$HOME/gaianet/config.json` runs a Phi 3.5 LLM and a nomic-embed embedding model. You can easily [switch to a Llama 3.1 8b LLM by giving a different configuration](https://github.com/GaiaNet-AI/node-configs/tree/main/llama-3.1-8b-instruct) to `gaianet init`. Configurations for many more LLMs are [available here](https://github.com/GaiaNet-AI/node-configs).
+
+Start running the Gaia node.
+
+```bash
+gaianet start
+```
+
+Once it starts on your machine, you can simply go to `http://localhost:8080`. You can open a browser to that URL to see the node information and then chat with the LLM. This node API server also supports `v1/chat/completions` and `v1/embeddings` endpoints, fully compatible with OpenAI APIs.
+
+If you are running it on a server or need to access the LLM sevices from the Internet, the Gaia node has automatically set up connection tunneling for you. The script prints the Internet address for the LLM service on the console as follows.
+
+```
+... ... https://0xf63939431ee11267f4855a166e11cc44d24960c0.us.gaianet.network
+```
+
+To stop running the LLM services, you can run the following script.
+
+```bash
+gaianet stop
+```
+
+If you're looking to configure LLMs further, explore the details [here](https://docs.gaianet.ai/category/node-operator-guide).
+
+## Quick start with Moxin
+
+Moxin is a cross-platform LLM client written in Rust, and built on LlamaEdge components. It offers an intuitive UI for running LLMs with just a few clicks.
+
+Download the Moxin app install package for your device from the [Moxin website](https://www.moxin.app/). Here's how to get started on macOS:
+
+* Download and install the `dmg` file from https://www.moxin.app/ on your Macbook.
+* Browse model cards and choose one model to download after open the Moxin app. As models are quite large, this may take several minutes.
+* Engage with the model via a simple and interactive chat interface.
+
+![](quick-start-command-01.png)
+
+
+
+
+---
+File: /user-guide/tool-call.md
+---
+
+---
+sidebar_position: 3
+---
+
+# Calling external tools
+
+Tool calling is one of the truly "LLM native" interaction modes that has never existed before. 
+It gives the "thinking" LLMs the ability to "act" -- both in acquiring new knowledge and in performing real world actions. It is a crucial part of any agentic application.
+
+Open source LLMs are increasingly good at using tools. The Llama 3 models have now made it possible to have reliable tool calling performance on 8b class of LLMs running on your own laptop!
+
+In this tutorial, we will show you a simple Python program that allows a local LLM to run code and manipulate data on the local computer!
+
+
+## Prerequisites
+
+Follow [this guide](openai-api/intro.md) to start an LlamaEdge API server. 
+For example, we will need an open source model that is capable of tool calling. 
+The Groq-tuned Llama 3 8B model is a good choice. Let's download the model file. 
+
+```
+curl -LO https://huggingface.co/second-state/Llama-3-Groq-8B-Tool-Use-GGUF/resolve/main/Llama-3-Groq-8B-Tool-Use-Q5_K_M.gguf
+```
+
+Then start the LlamaEdge API server for this model as follows. 
+
+```
+wasmedge --dir .:. \
+    --nn-preload default:GGML:AUTO:Llama-3-Groq-8B-Tool-Use-Q5_K_M.gguf \
+    --nn-preload embedding:GGML:AUTO:nomic-embed-text-v1.5.f16.gguf \
+    llama-api-server.wasm \
+    --model-alias default,embedding \
+    --model-name llama-3-groq-8b,nomic-embed \
+    --prompt-template groq-llama3-tool,embedding \
+    --batch-size 128,8192 \
+    --ctx-size 8192,8192
+```
+
+Note the `groq-llama3-tool` prompt template. It constructs user queries and LLM responses, including JSON messages for tool calls, into proper formats that the model is finetuned to follow. 
+
+> You can [start a Gaia node](https://github.com/GaiaNet-AI/node-configs/tree/main/llama-3-groq-8b-tool) for the Llama-3-Groq model. You can then use the node's API URL endpoint and model name in your tool call apps.
+
+## Run the demo agent
+
+The [agent app](https://github.com/second-state/llm_todo) is written in Python. It demonstrates how the LLM could use tools to operate a SQL database. In this case, it starts and operates an in-memory SQLite database. The database stores a list of todo items. 
+
+Download the code and install the Python dependencies as follows. 
+
+```
+git clone https://github.com/second-state/llm_todo
+cd llm_todo
+pip install -r requirements.txt
+```
+
+Set the environment variables for the API server and model name we just set up. 
+
+```
+export OPENAI_MODEL_NAME="llama-3-groq-8b"
+export OPENAI_BASE_URL="http://127.0.0.1:8080/v1"
+```
+
+Run the `main.py` application and bring up the command line chat interface. 
+
+```
+python main.py
+```
+
+## Use the agent
+
+Now, you can ask the LLM to perform tasks. For example, you can say 
+
+```
+User: 
+Help me to write down it I'm going to fix a bug
+```
+
+The LLM understands that you need to insert a record into the database and returns a tool call response in JSON. 
+
+```
+Assistant:
+<tool_call>
+{"id": 0, "name": "create_task", "arguments": {"task": "going to fix a bug"}}
+</tool_call>
+```
+
+The agent app (i.e., `main.py`) executes the tool call `create_task` in the JSON response, and sends back the results as role `Tool`. You do not need to do anything here as it happens automatically in `main.py`. The SQLite database is updated when the agent app executes the tool call. 
+
+```
+Tool:
+[{'result': 'ok'}]
+```
+
+The LLM receives the execution result and then answers you. 
+
+```
+Assistant:
+I've added "going to fix a bug" to your task list. Is there anything else you'd like to do?
+```
+
+You can continue the conversation. 
+
+To learn more about how tool calling works, see [this article](https://github.com/LlamaEdge/LlamaEdge/blob/main/api-server/ToolUse.md).
+
+
+## Code walkthrough
+
+The `main.py` script serves as a great example to show the anatomy of a tool call application. 
+
+First, there is the `Tools` JSON structure that defines the available tools. Each tool is designed as a function, with a function name and a set of parameters. The `description` field is especially important. It explains when and how the tool should be used. The LLM "understands" this description and uses it to determine whether this tool should be used to respond to a user query. The LLM will include those function names in its tool call responses when needed. 
+
+```
+Tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "create_task",
+            "description": "Create a task",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "Task's content",
+                    }
+                },
+            },
+        },
+    },
+    ... ...
+]
+```
+
+Then, the `eval_tools()` function maps the tool function names and parameters in the LLM JSON responses to actual Python functions that need to be executed. 
+
+```
+def eval_tools(tools):
+    result = []
+    for tool in tools:
+        fun = tool.function
+        if fun.name == "create_task":
+            arguments = json.loads(fun.arguments)
+            result.append(create_task(arguments["task"]))
+        ... ...
+
+    if len(result) > 0:
+        print("Tool:")
+        print(result)
+
+    return result
+```
+
+The Python functions perform CURD database operations as you would expect. 
+
+```
+def create_task(task):
+    try:
+        conn.execute("INSERT INTO todo (task, status) VALUES (?, ?)", (task, "todo"))
+        conn.commit()
+        return {"result": "ok"}
+    except Exception as e:
+        return {"result": "error", "message": str(e)}
+```
+
+With the tool call functions defined both in JSON and Python, we can now look into how the agent manages the conversation. The user query is sent through the `chat_completions` function. 
+
+```
+def chat_completions(messages):
+    stream = Client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=messages,
+        tools=Tools,
+        stream=True,
+    )
+
+    tool_result = handler_llm_response(messages, stream)
+    if len(tool_result) > 0:
+        for result in tool_result:
+            messages.append({"role": "tool", "content": json.dumps(result)})
+        return False
+    else:
+        return True
+```
+
+When it receives a response, it calls `handler_llm_response()` to determine if the LLM response requires tool call. If tool call is not needed, the LLM response is simply displayed to the user. 
+
+But if a tool call JSON section is present in the LLM response, the `handler_llm_response()` function is responsible of executing it by calling the associated Python function. Each tool call execution result is automatically sent back to the LLM as a message with the `tool` role. The LLM will then use these `tool` result messages to generate a new response. 
+
+```
+def handler_llm_response(messages, stream):
+    tools = []
+    content = ""
+    print("Assistant:")
+    for chunk in stream:
+        if len(chunk.choices) == 0:
+            break
+        delta = chunk.choices[0].delta
+        print(delta.content, end="")
+        content += delta.content
+        if len(delta.tool_calls) == 0:
+            pass
+        else:
+            if len(tools) == 0:
+                tools = delta.tool_calls
+            else:
+                for i, tool_call in enumerate(delta.tool_calls):
+                    if tools[i] == None:
+                        tools[i] = tool_call
+                    else:
+                        argument_delta = tool_call["function"]["arguments"]
+                        tools[i]["function"]["arguments"].extend(argument_delta)
+    if len(tools) == 0:
+        messages.append({"role": "assistant", "content": content})
+    else:
+        tools_json = [tool.json() for tool in tools]
+        messages.append(
+            {"role": "assistant", "content": content, "tool_call": tools_json}
+        )
+
+    print()
+
+    return eval_tools(tools)
+```
+
+## Make it robust 
+
+One of the key challenges for LLM apps is that LLM responses are often unreliable. What if
+
+*The LLM fails to generate a correct tool call response that is required to answer the user query.*
+
+In this case, you could adjust and finetune the description for each tool call function. The LLM selects its tools based on those descriptions. Writing descriptions to match common user queries is essential. 
+
+*The LLM hallucinates and generate tool calls with non-existent function names or wrong parameters.* 
+
+The agent app should capture this error and ask the LLM to re-generate a response. If the LLM cannot generate a valid tool call response, the agent could answer something like 
+
+[I'm sorry Dave, I'm afraid I can't do that](https://www.youtube.com/watch?v=5lsExRvJTAI)
+
+*The LLM generates malformatted JSON structures for tools.*
+
+Same as above. The agent should capture and handle the error. 
+
+Tool calling is a key feature of the nascent field of agentic LLM apps. We cannot wait to see what you come up with!
+
+
+
+
+---
+File: /intro.md
+---
+
+---
+sidebar_position: 1
+---
+
+# LlamaEdge
+
+LlamaEdge is the easiest & fastest way to run customized and fine-tuned LLMs locally or on the edge.
+
+* Lightweight inference apps. LlamaEdge is in MBs instead of GBs
+* Native and GPU accelerated performance
+* Supports many GPU and hardware accelerators
+* Supports many optimized inference libraries
+* Wide selection of AI / LLM models
+
+Click on the links to learn why use LlamaEdge instead of [Python / Pytorch](llamaedge_vs_python), [llama.cpp](llamaedge_vs_llamacpp), and [standalone API servers](llamaedge_vs_ollama) such as Ollama.
+
+
+
+---
+File: /llamaedge_vs_llamacpp.md
+---
+
+---
+sidebar_position: 3
+---
+
+# LlamaEdge vs llama.cpp
+
+The llama.cpp project is one of the inference backends for LlamaEdge. LlamaEdge provides high level application
+components to interact with AI models, such as encoding and decoding data,
+managing prompts and contexts, knowledge supplement, and tool use. It simplifies how business applications could 
+make use of the models. LlamaEdge and llama.cpp are complementary technologies.
+
+In fact, LlamaEdge is designed to be agnostic to the underlying native runtimes. 
+You can swap out llama.cpp for a different LLM
+runtime, such as [Intel neural speed engine](https://github.com/WasmEdge/WasmEdge/issues/3260) and [Apple MLX runtime](https://github.com/WasmEdge/WasmEdge/issues/3266), without changing or even recompiling the application code.
+
+Besides LLMs, LlamaEdge could support runtimes for other types of AI models, such as 
+[stable diffusion](https://github.com/WasmEdge/WasmEdge/issues/3405), [Yolo](https://github.com/WasmEdge/WasmEdge/issues/2768), [whisper.cpp](https://github.com/WasmEdge/WasmEdge/issues/3287), and [Google MediaPipe](https://github.com/WasmEdge/mediapipe-rs).
+
+
+
+
+---
+File: /llamaedge_vs_ollama.md
+---
+
+---
+sidebar_position: 4
+---
+
+# LlamaEdge vs Ollama
+
+There are several popular tools to run "local LLMs". Ollama is one of the earlist and most popular. Why do people
+choose LlamaEdge over them?
+
+* LlamaEdge is very small. The entire runtime and application is only 30MB. That is about 1/3 of the nearest competitor.
+* LlamaEdge does not need root or sudo permissions. It does not install or run any daemon on your system. Hence LlamaEdge can be easily embedded into your own app.
+* LlamaEdge apps are cross-platform. A single binary file can run on all supported OSes, CPUs, and GPUs. That also makes it simple to embed LlamaEdge in your apps.
+* Through Docker integration, an LlamaEdge container combines model files, configurations, and runtime into a single package ensuring compatibility and portability over time. All from the Docker Hub you already use.
+* LlamaEdge supports alternative runtimes beyond llama.cpp to achieve the most optimal performance for your model and hardware.
+* LlamaEdge already supports multimodal vision models. It will soon support speech-to-text and text-to-image models through as OpenAI-compatible APIs.
+* LlamaEdge is more secure. **LlamaEdge server is a sandboxed Wasm** and does not require root privileges. So it is much harder to exploit.
+
+Finally, LlamaEdge is a developer platform. It provides Rust APIs and components for you to build your own applications.
+It enables developers to create a single compact and cross-platform binary app that can be easily deployed and orchestrated across clouds.
+
+* The [server-side RAG](user-guide/server-side-rag/quick-start) API server is built on LlamaEdge components.
+* The [moxin](https://github.com/project-robius/moxin) LLM client app uses LlamaEdge as the embedded inference engine.
+* The [GaiaNet](https://github.com/GaiaNet-AI/gaianet-node) project embeds LlamaEdge to run a large number of decentralized LLM agents across the web.
+* The [Terminus OS](https://www.jointerminus.com/) project is a Kubernetes-based personal OS. It embeds LlamaEdge to power AI services such as local search and document QA.
+
+
+
+
+---
+File: /llamaedge_vs_python.md
+---
+
+---
+sidebar_position: 2
+---
+
+# LlamaEdge vs Python
+
+Most AI models are trained and even finetuned in Python / PyTorch, but you should not deploy and run them in Python. 
+In fact, running production level AI inference in Python is extremely inefficient -- a natively compiled language
+can be [35,000x faster than Python](https://www.modular.com/blog/how-mojo-gets-a-35-000x-speedup-over-python-part-1).
+Developers choose LlamaEdge over Python because:
+
+* LlamaEdge is only 1/100 the size of a Python runtime. Do you know that the smallest PyTorch Docker image is [almost 4GB](https://hub.docker.com/r/pytorch/pytorch/tags)?
+* LlamaEdge is a single install package with no complex dependencies. It is very easy to install and get started. It does not take the [best minds of our generation](https://twitter.com/santiviquez/status/1676677829751177219) to install it.
+* Developers can create LlamaEdge apps in Rust, which is much faster than Python in pre and post processing data that goes into the model. A good example is the [LlamaEdge chatbot and API server](https://github.com/LlamaEdge/LlamaEdge/tree/main/api-server) -- it is orders of magnitudes faster than Python-based web app servers.
+
+Learn more: [Why did Elon Musk say that Rust is the Language of AGI?](https://blog.stackademic.com/why-did-elon-musk-say-that-rust-is-the-language-of-agi-eb36303ce341) 
+

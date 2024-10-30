@@ -1,0 +1,900 @@
+Directory Structure:
+
+└── ./
+    ├── embed_js
+    │   ├── src
+    │   │   └── main.rs
+    │   ├── Cargo.toml
+    │   └── README.md
+    ├── embed_js_module
+    │   ├── src
+    │   │   └── main.rs
+    │   ├── async_demo.js
+    │   ├── Cargo.toml
+    │   └── README.md
+    ├── embed_rust_module
+    │   ├── src
+    │   │   └── main.rs
+    │   ├── Cargo.toml
+    │   └── README.md
+    ├── embed_use_es6_module
+    │   ├── src
+    │   │   └── main.rs
+    │   ├── Cargo.toml
+    │   └── es6_module_demo.js
+    ├── host_function
+    │   ├── src
+    │   │   └── main.rs
+    │   ├── wasmedge_c
+    │   │   └── demo_wasmedge.c
+    │   ├── Cargo.toml
+    │   └── README.md
+    └── js_extend.rs
+
+
+
+---
+File: /embed_js/src/main.rs
+---
+
+use wasmedge_quickjs::*;
+
+fn main() {
+    let mut ctx = Context::new();
+    js_hello(&mut ctx);
+    run_js_code(&mut ctx);
+    run_js_function(&mut ctx);
+    run_rust_function(&mut ctx);
+    rust_new_object_and_js_call(&mut ctx);
+    js_new_object_and_rust_call(&mut ctx);
+    js_promise(&mut ctx);
+}
+
+fn js_hello(ctx: &mut Context) {
+    println!("\n<----run_simple_js---->");
+    let code = r#"print('hello quickjs')"#;
+    let r = ctx.eval_global_str(code);
+    println!("return value:{:?}", r);
+}
+
+fn run_js_code(ctx: &mut Context) {
+    println!("\n<----run_js_code---->");
+    let code = r#"
+    let a = 1+1;
+    print('js print: 1+1=',a);
+    'hello'; // eval_return
+    "#;
+    let r = ctx.eval_global_str(code);
+    println!("return value:{:?}", r);
+}
+
+fn run_js_function(ctx: &mut Context) {
+    println!("\n<----run_js_function---->");
+    let code = r#"
+    (x)=>{
+        print("js print: x=",x)
+    }
+    "#;
+    let r = ctx.eval_global_str(code);
+    println!("return value:{:?}", r);
+    if let JsValue::Function(f) = r {
+        let hello_str = ctx.new_string("hello");
+        let mut argv = vec![hello_str.into()];
+        let r = f.call(&mut argv);
+        println!("return value:{:?}", r);
+    }
+
+    let code = r#"
+    (x)=>{
+        print("\nx=",x)
+        let old_value = x[0]
+        x[0] = 1
+        return old_value
+    }
+    "#;
+    let r = ctx.eval_global_str(code);
+    if let JsValue::Function(f) = r {
+        let mut x = ctx.new_array();
+        x.set(0, 0.into());
+        x.set(1, 1.into());
+        x.set(2, 2.into());
+
+        let mut argv = vec![x.into()];
+        println!("argv = {:?}", argv);
+        let r = f.call(&mut argv);
+        println!("return value:{:?}", r);
+    }
+}
+
+fn run_rust_function(ctx: &mut Context) {
+    println!("\n<----run_rust_function---->");
+
+    struct HelloFn;
+    impl JsFn for HelloFn {
+        fn call(_ctx: &mut Context, _this_val: JsValue, argv: &[JsValue]) -> JsValue {
+            println!("hello from rust");
+            println!("argv={:?}", argv);
+            JsValue::UnDefined
+        }
+    }
+    let f = ctx.new_function::<HelloFn>("hello");
+    ctx.get_global().set("hi", f.into());
+    let code = r#"hi(1,2,3)"#;
+    let r = ctx.eval_global_str(code);
+    println!("return value:{:?}", r);
+}
+
+fn rust_new_object_and_js_call(ctx: &mut Context) {
+    println!("\n<----rust_new_object_and_js_call---->");
+    let mut obj = ctx.new_object();
+    obj.set("a", 1.into());
+    obj.set("b", ctx.new_string("abc").into());
+
+    struct ObjectFn;
+    impl JsFn for ObjectFn {
+        fn call(_ctx: &mut Context, this_val: JsValue, argv: &[JsValue]) -> JsValue {
+            println!("hello from rust");
+            println!("argv={:?}", argv);
+            if let JsValue::Object(obj) = this_val {
+                let obj_map = obj.to_map();
+                println!("this={:#?}", obj_map);
+            }
+            JsValue::UnDefined
+        }
+    }
+
+    let f = ctx.new_function::<ObjectFn>("anything");
+    obj.set("f", f.into());
+
+    ctx.get_global().set("test_obj", obj.into());
+
+    let code = r#"
+    print('test_obj keys=',Object.keys(test_obj))
+    print('test_obj.a=',test_obj.a)
+    print('test_obj.b=',test_obj.b)
+    test_obj.f(1,2,3,"hi")
+    "#;
+
+    ctx.eval_global_str(code);
+}
+
+fn js_new_object_and_rust_call(ctx: &mut Context) {
+    println!("\n<----js_new_object_and_rust_call---->");
+    let code = r#"
+    let obj = {
+        a:1,
+        b:"abc",
+        f(x){
+            print('this=',Object.keys(this))
+            print('x=',x)
+            print('something_from_rust=',this.something_from_rust)
+        }
+    }
+    obj
+    "#;
+    if let JsValue::Object(mut obj) = ctx.eval_global_str(code) {
+        let mut args = vec![ctx.new_string("rust_args_string").into()];
+
+        let obj_map = obj.to_map();
+        println!("{:#?}", obj_map);
+
+        if let Ok(o) = obj_map {
+            println!("---call function---");
+            if let Some(JsValue::Function(f)) = o.get("f") {
+                f.call(&mut args);
+            }
+        }
+        obj.set("something_from_rust", 255.into());
+        println!("---call function from obj---");
+        obj.invoke("f", &mut args);
+    }
+}
+
+fn js_promise(ctx: &mut Context) {
+    println!("\n<----promise---->");
+    let code = r#"
+    async function f1(){
+        print("f1 running")
+        return 1
+    }
+    async function f(){
+        print("f running")
+        let f1_result = await f1();
+        print("await f1")
+        return f1_result
+    };
+    f
+    "#;
+
+    let r = ctx.eval_global_str(code);
+    println!("{:?}", r);
+    if let JsValue::Function(f) = r {
+        let mut args = vec![];
+        let r = f.call(&mut args);
+        println!("{:?}", r);
+        if let JsValue::Promise(p) = r {
+            let result = p.get_result();
+            println!("promise result:{:?}", result);
+            println!("poll promise");
+            ctx.promise_loop_poll();
+            let result = p.get_result();
+            println!("promise result:{:?}", result);
+        }
+    }
+}
+
+
+
+---
+File: /embed_js/Cargo.toml
+---
+
+[package]
+name = "embed_js"
+version = "0.1.0"
+authors = ["ubuntu"]
+edition = "2018"
+
+[[bin]]
+name = "embed_js"
+path = "src/main.rs"
+
+[dependencies]
+wasmedge_quickjs = "0.2.0"
+
+
+
+
+---
+File: /embed_js/README.md
+---
+
+
+## Build
+
+```
+cargo build --target wasm32-wasi --release
+```
+
+## Run
+
+```
+wasmedge --dir .:. target/wasm32-wasi/release/embed_js.wasm
+```
+
+
+
+---
+File: /embed_js_module/src/main.rs
+---
+
+use wasmedge_quickjs::*;
+
+fn main() {
+    let mut ctx = Context::new();
+
+    let code = r#"
+    import('async_demo.js').then((demo)=>{
+        return demo.wait_simple_val(1)
+    })
+    "#;
+
+    let p = ctx.eval_global_str(code);
+    println!("before poll:{:?}", p);
+    if let JsValue::Promise(ref p) = p {
+        let v = p.get_result();
+        println!("v = {:?}", v);
+    }
+    ctx.promise_loop_poll();
+    println!("after poll:{:?}", p);
+    if let JsValue::Promise(ref p) = p {
+        let v = p.get_result();
+        println!("v = {:?}", v);
+    }
+}
+
+
+
+---
+File: /embed_js_module/async_demo.js
+---
+
+import * as std from 'std'
+
+async function simple_val (){
+    return "abc"
+}
+
+export async function wait_simple_val (a){
+    let x = await simple_val()
+    print("wait_simple_val:",a,':',x)
+    return 12345
+}
+
+
+
+---
+File: /embed_js_module/Cargo.toml
+---
+
+[package]
+name = "embed_js_module"
+version = "0.1.0"
+authors = ["ubuntu"]
+edition = "2018"
+
+[[bin]]
+name = "embed_js_module"
+path = "src/main.rs"
+
+[dependencies]
+wasmedge_quickjs = "0.2.0"
+
+
+
+
+---
+File: /embed_js_module/README.md
+---
+
+
+## Build
+
+```
+cargo build --target wasm32-wasi --release
+```
+
+## Run
+
+```
+wasmedge --dir .:. target/wasm32-wasi/release/embed_js_module.wasm
+```
+
+
+
+---
+File: /embed_rust_module/src/main.rs
+---
+
+mod point {
+    use wasmedge_quickjs::*;
+
+    #[derive(Debug)]
+    struct Point(i32, i32);
+
+    struct PointDef;
+
+    impl JsClassDef<Point> for PointDef {
+        const CLASS_NAME: &'static str = "Point\0";
+        const CONSTRUCTOR_ARGC: u8 = 2;
+
+        fn constructor(_: &mut Context, argv: &[JsValue]) -> Option<Point> {
+            println!("rust-> new Point {:?}", argv);
+            let x = argv.get(0);
+            let y = argv.get(1);
+            if let (Some(JsValue::Int(ref x)), Some(JsValue::Int(ref y))) = (x, y) {
+                Some(Point(*x, *y))
+            } else {
+                None
+            }
+        }
+
+        fn proto_init(p: &mut JsClassProto<Point, PointDef>) {
+            struct X;
+            impl JsClassGetterSetter<Point> for X {
+                const NAME: &'static str = "x\0";
+
+                fn getter(_: &mut Context, this_val: &mut Point) -> JsValue {
+                    println!("rust-> get x");
+                    this_val.0.into()
+                }
+
+                fn setter(_: &mut Context, this_val: &mut Point, val: JsValue) {
+                    println!("rust-> set x:{:?}", val);
+                    if let JsValue::Int(x) = val {
+                        this_val.0 = x
+                    }
+                }
+            }
+
+            struct Y;
+            impl JsClassGetterSetter<Point> for Y {
+                const NAME: &'static str = "y\0";
+
+                fn getter(_: &mut Context, this_val: &mut Point) -> JsValue {
+                    println!("rust-> get y");
+                    this_val.1.into()
+                }
+
+                fn setter(_: &mut Context, this_val: &mut Point, val: JsValue) {
+                    println!("rust-> set y:{:?}", val);
+                    if let JsValue::Int(y) = val {
+                        this_val.1 = y
+                    }
+                }
+            }
+
+            struct FnPrint;
+            impl JsMethod<Point> for FnPrint {
+                const NAME: &'static str = "pprint\0";
+                const LEN: u8 = 0;
+
+                fn call(_: &mut Context, this_val: &mut Point, _argv: &[JsValue]) -> JsValue {
+                    println!("rust-> pprint: {:?}", this_val);
+                    JsValue::Int(1)
+                }
+            }
+
+            p.add_getter_setter(X);
+            p.add_getter_setter(Y);
+            p.add_function(FnPrint);
+        }
+    }
+
+    struct PointModule;
+    impl ModuleInit for PointModule {
+        fn init_module(ctx: &mut Context, m: &mut JsModuleDef) {
+            m.add_export("Point\0", PointDef::class_value(ctx));
+        }
+    }
+
+    pub fn init_point_module(ctx: &mut Context) {
+        ctx.register_class(PointDef);
+        ctx.register_module("point\0", PointModule, &["Point\0"]);
+    }
+}
+
+use wasmedge_quickjs::*;
+fn main() {
+    let mut ctx = Context::new();
+    point::init_point_module(&mut ctx);
+
+    let code = r#"
+    import('point').then((point)=>{
+        let p0 = new point.Point(1,2)
+        print("js->",p0.x,p0.y)
+        p0.pprint()
+
+        try{
+            let p = new point.Point()
+            print("js-> p:",p)
+            print("js->",p.x,p.y)
+            p.x=2
+            p.pprint()
+        } catch(e) {
+            print("An error has been caught");
+            print(e)
+        }
+        
+    })
+    "#;
+
+    ctx.eval_global_str(code);
+    ctx.promise_loop_poll();
+}
+
+
+
+---
+File: /embed_rust_module/Cargo.toml
+---
+
+[package]
+name = "embed_rust_module"
+version = "0.1.0"
+authors = ["ubuntu"]
+edition = "2018"
+
+[[bin]]
+name = "embed_rust_module"
+path = "src/main.rs"
+
+[dependencies]
+wasmedge_quickjs = "0.2.0"
+
+
+
+
+---
+File: /embed_rust_module/README.md
+---
+
+
+## Build
+
+```
+cargo build --target wasm32-wasi --release
+```
+
+## Run
+
+```
+wasmedge --dir .:. target/wasm32-wasi/release/embed_rust_module.wasm
+```
+
+
+
+---
+File: /embed_use_es6_module/src/main.rs
+---
+
+use wasmedge_quickjs::*;
+
+fn main() {
+    let mut ctx = Context::new();
+
+    let code = r#"
+    let m = import('es6_module_demo.js')
+    m
+    "#;
+
+    let p = ctx.eval_global_str(code);
+    println!("before poll:{:?}", p);
+    ctx.promise_loop_poll();
+    println!("after poll:{:?}", p);
+    if let JsValue::Promise(ref p) = p {
+        let m = p.get_result();
+        println!("m = {:?}", m);
+        if let JsValue::Object(mod_obj) = m {
+            let f = mod_obj.get("do_something");
+            println!("do_something = {:?}", f);
+            if let JsValue::Function(f) = f {
+                f.call(&mut [ctx.new_string("hello").into()]);
+            }
+        }
+    }
+}
+
+
+
+---
+File: /embed_use_es6_module/Cargo.toml
+---
+
+[package]
+name = "embed_use_es6_module"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasmedge_quickjs = "0.2.0"
+
+
+---
+File: /embed_use_es6_module/es6_module_demo.js
+---
+
+import * as std from 'std';
+
+export function do_something(a) {
+  print('[es6_module_demo.js]=> do_something: a =', a);
+  return a;
+}
+
+
+
+---
+File: /host_function/src/main.rs
+---
+
+mod host_extern {
+    use wasmedge_quickjs::{Context, JsFn, JsValue};
+
+    #[link(wasm_import_module = "extern")]
+    extern "C" {
+        pub fn host_inc(v: i32) -> i32;
+    }
+
+    pub struct HostIncFn;
+    impl JsFn for HostIncFn {
+        fn call(ctx: &mut Context, _this_val: JsValue, argv: &[JsValue]) -> JsValue {
+            if let Some(JsValue::Int(i)) = argv.get(0) {
+                unsafe {
+                    let r = host_inc(*i);
+                    r.into()
+                }
+            } else {
+                ctx.throw_type_error("'v' is not a int").into()
+            }
+        }
+    }
+}
+
+use wasmedge_quickjs::*;
+
+fn main() {
+    let mut ctx = Context::new();
+    let f = ctx.new_function::<host_extern::HostIncFn>("host_inc");
+    ctx.get_global().set("host_inc", f.into());
+    ctx.eval_global_str("print('js=> host_inc(2)=',host_inc(2))");
+}
+
+
+
+---
+File: /host_function/wasmedge_c/demo_wasmedge.c
+---
+
+#include <stdio.h>
+#include "wasmedge/wasmedge.h"
+
+WasmEdge_Result HostInc(void *Data, WasmEdge_MemoryInstanceContext *MemCxt,
+                    const WasmEdge_Value *In, WasmEdge_Value *Out) {
+  int32_t Val1 = WasmEdge_ValueGetI32(In[0]);
+  printf("Runtime(c)=> host_inc call : %d\n",Val1 + 1);
+  Out[0] = WasmEdge_ValueGenI32(Val1 + 1);
+  return WasmEdge_Result_Success;
+}
+
+// mapping dirs
+const char* dirs = ".:..\0";
+
+int main(int Argc, const char* Argv[]) {
+	/* Create the configure context and add the WASI support. */
+	/* This step is not necessary unless you need WASI support. */
+	WasmEdge_ConfigureContext *ConfCxt = WasmEdge_ConfigureCreate();
+	WasmEdge_ConfigureAddHostRegistration(ConfCxt, WasmEdge_HostRegistration_Wasi);
+	/* The configure and store context to the VM creation can be NULL. */
+	WasmEdge_VMContext *VMCxt = WasmEdge_VMCreate(ConfCxt, NULL);
+	WasmEdge_ImportObjectContext *WasiObject = WasmEdge_VMGetImportModuleContext(VMCxt, WasmEdge_HostRegistration_Wasi);
+    WasmEdge_ImportObjectInitWASI(WasiObject,Argv+1,Argc-1,NULL,0, &dirs,1);
+
+
+    /* Create the import object. */
+    WasmEdge_String ExportName = WasmEdge_StringCreateByCString("extern");
+    WasmEdge_ImportObjectContext *ImpObj = WasmEdge_ImportObjectCreate(ExportName);
+    enum WasmEdge_ValType ParamList[1] = { WasmEdge_ValType_I32 };
+    enum WasmEdge_ValType ReturnList[1] = { WasmEdge_ValType_I32 };
+    WasmEdge_FunctionTypeContext *FuncType = WasmEdge_FunctionTypeCreate(ParamList, 1, ReturnList, 1);
+    WasmEdge_FunctionInstanceContext *HostFunc = WasmEdge_FunctionInstanceCreate(FuncType, HostInc, NULL, 0);
+    WasmEdge_FunctionTypeDelete(FuncType);
+    WasmEdge_String HostFuncName = WasmEdge_StringCreateByCString("host_inc");
+    WasmEdge_ImportObjectAddFunction(ImpObj, HostFuncName, HostFunc);
+    WasmEdge_StringDelete(HostFuncName);
+
+    WasmEdge_VMRegisterModuleFromImport(VMCxt, ImpObj);
+
+
+	/* The parameters and returns arrays. */
+	WasmEdge_Value Params[0];
+	WasmEdge_Value Returns[0];
+	/* Function name. */
+	WasmEdge_String FuncName = WasmEdge_StringCreateByCString("_start");
+	/* Run the WASM function from file. */
+	WasmEdge_Result Res = WasmEdge_VMRunWasmFromFile(VMCxt, Argv[1], FuncName, Params, 0, Returns, 0);
+
+	if (WasmEdge_ResultOK(Res)) {
+		printf("\nRuntime(c)=> OK\n");
+	} else {
+		printf("\nRuntime(c)=> Error message: %s\n", WasmEdge_ResultGetMessage(Res));
+	}
+
+	/* Resources deallocations. */
+	WasmEdge_VMDelete(VMCxt);
+	WasmEdge_ConfigureDelete(ConfCxt);
+	WasmEdge_StringDelete(FuncName);
+	return 0;
+}
+
+
+---
+File: /host_function/Cargo.toml
+---
+
+[package]
+name = "host_function"
+version = "0.1.0"
+authors = ["csh <458761603@qq.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wasmedge_quickjs = "0.2.0"
+
+
+
+---
+File: /host_function/README.md
+---
+
+# A wasi quickjs binding for rust
+this example show how to import a custom host function into quickjs.
+
+# Build
+
+```shell
+#build wasm
+$ cargo build --target wasm32-wasi --release
+
+#build custom webassembly Runtime
+$ cd wasmedge_c
+
+#build a custom Runtime
+wasmedge_c/$ gcc demo_wasmedge.c -lwasmedge_c -o demo_wasmedge
+```
+
+# Run
+
+```shell
+wasmedge_c/$ export LD_LIBRARY_PATH=.
+
+wasmedge_c/$ ./demo_wasmedge ../target/wasm32-wasi/release/host_function.wasm
+Runtime(c)=> host_inc call : 3
+js=> host_inc(2)= 3
+
+Runtime(c)=> OK
+wasmedge_c/$ 
+```
+
+
+
+---
+File: /js_extend.rs
+---
+
+use wasmedge_quickjs::js_class;
+use wasmedge_quickjs::{
+    AsObject, Context, ExtendsJsClassDef, JsClassDef, JsClassField, JsClassMethod, JsClassTool,
+    JsObject, JsValue, Runtime,
+};
+
+#[derive(Debug)]
+struct ClassA(i32);
+
+impl ClassA {
+    pub fn get_val(&self, _ctx: &mut Context) -> JsValue {
+        JsValue::Int(self.0)
+    }
+
+    pub fn inc(
+        &mut self,
+        _this_obj: &mut JsObject,
+        _ctx: &mut Context,
+        _argv: &[JsValue],
+    ) -> JsValue {
+        self.0 += 1;
+        JsValue::Int(self.0)
+    }
+}
+
+impl JsClassDef for ClassA {
+    type RefType = ClassA;
+
+    const CLASS_NAME: &'static str = "ClassA";
+
+    const CONSTRUCTOR_ARGC: u8 = 1;
+
+    const FIELDS: &'static [JsClassField<Self::RefType>] = &[("val", ClassA::get_val, None)];
+
+    const METHODS: &'static [JsClassMethod<Self::RefType>] = &[("inc", 0, ClassA::inc)];
+
+    unsafe fn mut_class_id_ptr() -> &'static mut u32 {
+        static mut CLASS_ID: u32 = 0;
+        &mut CLASS_ID
+    }
+
+    fn constructor_fn(
+        _ctx: &mut wasmedge_quickjs::Context,
+        argv: &[wasmedge_quickjs::JsValue],
+    ) -> Result<Self::RefType, wasmedge_quickjs::JsValue> {
+        match argv.get(0) {
+            Some(JsValue::Int(v)) => Ok(ClassA(*v)),
+            _ => Ok(ClassA(0)),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ClassB(ClassA, i32);
+
+impl AsRef<ClassA> for ClassB {
+    fn as_ref(&self) -> &ClassA {
+        &self.0
+    }
+}
+
+impl AsMut<ClassA> for ClassB {
+    fn as_mut(&mut self) -> &mut ClassA {
+        &mut self.0
+    }
+}
+
+impl ClassB {
+    pub fn get_val_b(&self, _ctx: &mut Context) -> JsValue {
+        JsValue::Int(self.1)
+    }
+
+    pub fn inc_b(
+        &mut self,
+        _this_obj: &mut JsObject,
+        _ctx: &mut Context,
+        _argv: &[JsValue],
+    ) -> JsValue {
+        self.1 += 1;
+        JsValue::Int(self.1)
+    }
+
+    pub fn display(
+        &mut self,
+        _this_obj: &mut JsObject,
+        _ctx: &mut Context,
+        _argv: &[JsValue],
+    ) -> JsValue {
+        println!("display=> {:?}", self);
+        JsValue::UnDefined
+    }
+}
+
+impl ExtendsJsClassDef for ClassB {
+    type RefType = ClassB;
+
+    type BaseDef = ClassA;
+
+    const EXT_CLASS_NAME: &'static str = "ClassB";
+
+    const CONSTRUCTOR_ARGC: u8 = 1;
+
+    const FIELDS: &'static [JsClassField<Self::RefType>] = &[("val_b", ClassB::get_val_b, None)];
+
+    const METHODS: &'static [JsClassMethod<Self::RefType>] =
+        &[("inc_b", 0, ClassB::inc_b), ("display", 0, ClassB::display)];
+
+    unsafe fn mut_class_id_ptr() -> &'static mut u32 {
+        static mut CLASS_ID: u32 = 0;
+        &mut CLASS_ID
+    }
+
+    fn constructor_fn(
+        ctx: &mut wasmedge_quickjs::Context,
+        argv: &[JsValue],
+    ) -> Result<Self::RefType, JsValue> {
+        let a = ClassA::constructor_fn(ctx, argv)?;
+        Ok(ClassB(a, 1))
+    }
+}
+
+fn main() {
+    let mut rt = Runtime::new();
+    rt.run_with_context(|ctx| {
+        let a_ctor = js_class::register_class::<ClassA>(ctx);
+        let b_ctor = js_class::register_class::<ClassB>(ctx);
+
+        let a_proto = ClassA::proto(ctx);
+        let b_proto = ClassB::proto(ctx);
+
+        js_class::class_extends(ctx, b_proto, a_proto);
+
+        let mut global = ctx.get_global();
+        global.set("ClassA", a_ctor);
+        global.set("ClassB", b_ctor);
+
+        let code = r#"
+        let a = new ClassA(1)
+        print('a.val =',a.val)
+        print('a.inc() =',a.inc())
+        print('a.val =',a.val)
+        print()
+
+        let b = new ClassB()
+        print('b.val =',b.val)
+        print('b.inc() =',b.inc())
+        print('b.val =',b.val)
+        print()
+
+        print('b.val_b =',b.val_b)
+        print('b.inc_b() =',b.inc_b())
+        print('b.val_b =',b.val_b)
+        print()
+
+        b.display()
+        print()
+
+        print('b instanceof ClassA =',b instanceof ClassA)
+        "#;
+        ctx.eval_global_str(code.to_string());
+    })
+}
+
