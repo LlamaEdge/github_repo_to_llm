@@ -1,14 +1,3 @@
-gaianet_md_2.csv
-gaianet_split.csv
-openai_summary.py
-__pycache__
-.pyc
-quickjs_sub.csv
-wasmedge_sub.csv
-meetings_md_2.csv
-wasmedge_md_short.csv
-llamaedge_short.csv
-llamaedge_split.csv
 .env
 upload.py
-local_repo/summary
+
