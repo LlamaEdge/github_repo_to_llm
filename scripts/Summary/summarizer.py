@@ -84,7 +84,7 @@ def agen(source_text, question):
 
 def main():
     input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\docs\wasmedge_docs.csv"
-    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\summary\wasmedge_docs_2.csv"
+    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\summary\wasmedge_docs.csv"
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
 
