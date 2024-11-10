@@ -1,0 +1,84 @@
+Content
+"```toml:.cargo/config.toml
+[build]
+target = ""wasm32-wasi""
+rustflags = [
+    ""--cfg"",
+    ""wasmedge"",
+    ""--cfg"",
+    ""tokio_unstable"",
+    ""-C"",
+    ""target-feature=+bulk-memory"",
+]
+
+[target.wasm32-wasi]
+runner = ""wasmedge --dir=.:. ""
+```"
+"```rust:build.rs
+use std::path::Path;
+
+fn main() {
+    let out_dir = std::env::var(""OUT_DIR"").unwrap();
+    let out_dir_path = Path::new(&out_dir);
+    std::fs::copy(""lib/libquickjs.a"", out_dir_path.join(""libquickjs.a""))
+        .expect(""Could not copy libquickjs.a to output directory"");
+    println!(""cargo:rustc-link-search={}"", &out_dir);
+    println!(""cargo:rustc-link-lib=quickjs"");
+}
+```"
+"```toml:Cargo.toml
+[package]
+name = ""wasmedge_quickjs""
+version = ""0.6.1-alpha""
+authors = [""csh <458761603@qq.com>"", ""Michael Yuan <michael@secondstate.io>""]
+description = ""Create your own JavaScript runtime and extension APIs for WasmEdge.""
+repository = ""https://github.com/second-state/wasmedge-quickjs""
+license = ""MIT OR Apache-2.0""
+readme = ""README.md""
+documentation = ""https://www.secondstate.io/articles/run-javascript-in-webassembly-with-wasmedge/""
+homepage = ""https://www.secondstate.io/""
+edition = ""2018""
+exclude = [""example_js/*"", ""examples/*""]
+
+[patch.crates-io]
+tokio = { git = ""https://github.com/second-state/wasi_tokio.git"", branch = ""v1.40.x"" }
+mio = { git = ""https://github.com/second-state/wasi_mio.git"", branch = ""v1.0.x"" }
+socket2 = { git = ""https://github.com/second-state/socket2.git"", branch = ""v0.5.x"" }
+
+[dependencies]
+argparse = ""0.2.2""
+image = { version = ""0.23.6"", default-features = false, features = [
+    ""jpeg"",
+    ""png"",
+], optional = true }
+imageproc = { version = ""0.22.0"", optional = true }
+libc = ""0.2""
+url = ""2.2.2""
+lazy_static = ""1.4""
+encoding = ""0.2""
+wasmedge_wasi_socket = { version = ""0.5"", features = [""wasi_poll""] }
+tokio = { version = ""1"", features = [""full""] }
+log = ""0.4.19""
+env_logger = ""0.10.0""
+
+rustls = { version = ""0.21.0"", optional = true }
+tokio-rustls = { version = ""0.24.1"", optional = true }
+webpki-roots = { version = ""0.25.0"", optional = true }
+crypto-wasi = { version = ""0.1.1"", optional = true }
+
+chat-prompts = { version = ""0.3"", optional = true }
+# wasi-nn = { git = ""https://github.com/second-state/wasmedge-wasi-nn"", branch = ""ggml"", optional = true }
+wasmedge-wasi-nn = { version = ""0.8.0"", optional = true }
+endpoints = { version = ""0.2"", optional = true }
+rustls-pemfile = ""1.0.4""
+
+[features]
+default = [""tls""]
+tls = [""rustls"", ""tokio-rustls"", ""webpki-roots""]
+img = [""image"", ""imageproc""]
+tensorflow = [""img""]
+wasi_nn = [""img""]
+ggml = [""chat-prompts"", ""dep:wasmedge-wasi-nn"", ""endpoints""]
+cjs = []
+nodejs_crypto = [""crypto-wasi""]
+```"
