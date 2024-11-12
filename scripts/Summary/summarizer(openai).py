@@ -1,6 +1,8 @@
 import csv
 import os
 import openai
+import sys
+import logging
 from openai import OpenAI
 client = OpenAI(api_key='')
 MODEL_NAME = "gpt-4o"
@@ -64,8 +66,12 @@ def agen(source_text, question):
     return chat_completion.choices[0].message.content
 
 def main():
-    input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\main_repos\gaianet_md_2.csv"
-    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\Output\split_summary\gaianet_md_open_new.csv"
+    if len(sys.argv) != 3:
+        logging.error("Usage: python script.py <input_csv> <output_csv>")
+        sys.exit(1)
+        
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
 

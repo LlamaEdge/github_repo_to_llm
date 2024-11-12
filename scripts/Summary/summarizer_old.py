@@ -1,6 +1,7 @@
 import openai
 import csv
 import os
+import sys
 
 API_BASE_URL = "https://llama.us.gaianet.network/v1"
 MODEL_NAME = "llama"
@@ -72,10 +73,16 @@ def agen(source_text, question):
     return chat_completion.choices[0].message.content
 
 def main():
-    input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\main_repos\2.llamaedge_all.csv"
-    output_path = "test_old.csv"
+    if len(sys.argv) != 3:
+        print("Usage: python summarizer_old.py <input_csv> <output_csv>")
+        sys.exit(1)
+
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
+    
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
+
     if output_file_exists:
         with open(output_path, 'r', newline='', encoding='utf-8') as csvfile:
             csv_reader = csv.DictReader(csvfile)

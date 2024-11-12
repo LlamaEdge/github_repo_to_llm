@@ -1,6 +1,8 @@
 import openai
 import csv
 import os
+import sys
+import logging
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 csv.field_size_limit(10**9)
@@ -83,11 +85,15 @@ def agen(source_text, question):
     return chat_completion.choices[0].message.content
 
 def main():
-    input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\docs\wasmedge_docs.csv"
-    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\summary\wasmedge_docs.csv"
+    if len(sys.argv) != 3:
+        logging.error("Usage: python summarizer.py <input_csv> <output_csv>")
+        sys.exit(1)
+        
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
+    
     processed_contents = set()
     output_file_exists = os.path.exists(output_path)
-
     row_count = 0
 
     with open(input_path, 'r', newline='', encoding='utf-8') as infile, \

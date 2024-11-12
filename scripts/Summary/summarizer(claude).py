@@ -1,6 +1,8 @@
 import anthropic
 import csv
 import os
+import sys
+import logging
 from typing import List, Dict
 
 class ClaudeSummarizer:
@@ -66,8 +68,12 @@ class ClaudeSummarizer:
         return message.content[0].text
 
 def main():
-    input_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\test_in.csv"
-    output_path = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\test_out.csv"
+    if len(sys.argv) != 3:
+        logging.error("Usage: python summarizer(claude).py <input_csv> <output_csv>")
+        sys.exit(1)
+        
+    input_path = sys.argv[1]
+    output_path = sys.argv[2]
     
     api_key = "sk-ant-"
     

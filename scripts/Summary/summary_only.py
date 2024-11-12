@@ -2,6 +2,7 @@ import pandas as pd
 import openai
 import logging
 import time
+import sys
 
 logging.basicConfig(level=logging.INFO)
 
@@ -50,7 +51,11 @@ def summarize_csv_content(input_csv_file, output_csv_file):
         logging.error(f"Error processing CSV: {e}")
 
 if __name__ == "__main__":
-    input_csv_file = '/home/aru/Desktop/Github_analyser/Output/main_repos/wasmedge_shorten.csv'  
-    output_csv_file = '/home/aru/Desktop/Github_analyser/Output/summary/wasmedge_summary.csv' 
-
+    if len(sys.argv) != 3:
+        logging.error("Usage: python script.py <input_csv> <output_csv>")
+        sys.exit(1)
+    
+    input_csv_file = sys.argv[1]
+    output_csv_file = sys.argv[2]
+    
     summarize_csv_content(input_csv_file, output_csv_file)
