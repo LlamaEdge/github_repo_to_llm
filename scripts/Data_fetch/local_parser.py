@@ -12,22 +12,39 @@ def process_local_repo(repo_path, paths=[]):
                 file_content = f.read()
             relative_path = os.path.relpath(file_path, repo_path)
             extension = os.path.splitext(relative_path)[1]
+            
             if extension == '.md':
                 formatted_content = f"The following is a markdown document located at {relative_path}\n------\n{file_content}\n------"
             elif extension == '.rs':
                 formatted_content = f"```rust:{relative_path}\n{file_content}\n```"
-            elif extension == '.css':
-                formatted_content = f"```css:{relative_path}\n{file_content}\n```"
-            elif extension == '.html':
-                formatted_content = f"```html:{relative_path}\n{file_content}\n```"
-            elif extension == '.json':
-                formatted_content = f"```json:{relative_path}\n{file_content}\n```"
             elif extension == '.sh':
                 formatted_content = f"```bash:{relative_path}\n{file_content}\n```"
             elif extension == '.py':
                 formatted_content = f"```python:{relative_path}\n{file_content}\n```"
             elif extension == '.js':
                 formatted_content = f"```javascript:{relative_path}\n{file_content}\n```"
+            elif extension == '.json':
+                formatted_content = f"```json:{relative_path}\n{file_content}\n```"
+            elif extension == '.txt':
+                formatted_content = f"The following is a plain text file located at {relative_path}\n------\n{file_content}\n------"
+            elif extension == '.toml':
+                formatted_content = f"```toml:{relative_path}\n{file_content}\n```"
+            elif extension == '.jsx':
+                formatted_content = f"```jsx:{relative_path}\n{file_content}\n```"
+            elif extension == '.css':
+                formatted_content = f"```css:{relative_path}\n{file_content}\n```"
+            elif extension == '.java':
+                formatted_content = f"```java:{relative_path}\n{file_content}\n```"
+            elif extension == '.hpp':
+                formatted_content = f"```hpp:{relative_path}\n{file_content}\n```"
+            elif extension == '.c':
+                formatted_content = f"```c:{relative_path}\n{file_content}\n```"
+            elif extension == '.yml':
+                formatted_content = f"```yml:{relative_path}\n{file_content}\n```"
+            elif extension == '.xml':
+                formatted_content = f"```xml:{relative_path}\n{file_content}\n```"
+            elif extension == '.html':
+                formatted_content = f"```html:{relative_path}\n{file_content}\n```"
             else:
                 formatted_content = f"The following document is located at {relative_path}\n------\n{file_content}\n------"
             paths.append({"FormattedContent": formatted_content})
@@ -41,7 +58,7 @@ def write_to_csv(data, output_file):
 
 if __name__ == "__main__":
     repo_path = input("Enter the local repository path: ")
+    output_path = input("Enter the output CSV file path: ")
     paths = process_local_repo(repo_path)
-    output_csv = r"C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\docs\qucik_js_js.csv"
-    write_to_csv(paths, output_csv)
-    print(f"CSV file '{output_csv}' generated successfully.")
+    write_to_csv(paths, output_path)
+    print(f"CSV file '{output_path}' generated successfully.")

@@ -95,7 +95,7 @@ def transform_and_write_csv(data, output_csv):
 
 if __name__ == "__main__":
     input_file = input("Enter the path of your text file: ")
-    final_output_csv = "wasmedge.csv"
+    output_file = input("Enter the path for output CSV file: ")
     parsed_data = parse_text_file(input_file)
-    transform_and_write_csv(parsed_data, final_output_csv)
-    print(f"Transformed CSV file '{final_output_csv}' generated successfully.")
+    transform_and_write_csv(parsed_data, output_file)
+    print(f"Transformed CSV file '{output_file}' generated successfully.")

@@ -44,7 +44,6 @@ def list_file_extensions(contents, file_extensions=None, parent_path=""):
             else:
                 print(f"Failed to fetch directory contents at {path}. Status code: {dir_response.status_code}")
         else:
-            # Get the file extension
             _, file_extension = os.path.splitext(item['name'])
             
             if file_extension:

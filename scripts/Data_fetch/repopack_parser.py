@@ -1,6 +1,7 @@
 import csv
 import os
-
+import sys
+csv.field_size_limit(10**9)
 def parse_text_file(input_file):
     data = []
     current_path = None
@@ -43,42 +44,44 @@ def transform_and_write_csv(data, output_csv):
             extension = os.path.splitext(path)[1]
 
             if extension == '.md':
-                new_content = f"The following is a markdown document located at {path}\n------\n{content}\n------"
+                formatted_content = f"The following is a markdown document located at {path}\n------\n{content}\n------"
             elif extension == '.rs':
-                new_content = f"```rust:{path}\n{content}\n```"
+                formatted_content = f"```rust:{path}\n{content}\n```"
             elif extension == '.sh':
-                new_content = f"```bash:{path}\n{content}\n```"
+                formatted_content = f"```bash:{path}\n{content}\n```"
             elif extension == '.py':
-                new_content = f"```python:{path}\n{content}\n```"
+                formatted_content = f"```python:{path}\n{content}\n```"
             elif extension == '.js':
-                new_content = f"```javascript:{path}\n{content}\n```"
+                formatted_content = f"```javascript:{path}\n{content}\n```"
             elif extension == '.json':
-                new_content = f"```json:{path}\n{content}\n```"
+                formatted_content = f"```json:{path}\n{content}\n```"
             elif extension == '.txt':
-                new_content = f"The following is a plain text file located at {path}\n------\n{content}\n------"
+                formatted_content = f"The following is a plain text file located at {path}\n------\n{content}\n------"
             elif extension == '.toml':
-                new_content = f"```toml:{path}\n{content}\n```"
+                formatted_content = f"```toml:{path}\n{content}\n```"
             elif extension == '.jsx':
-                new_content = f"```jsx:{path}\n{content}\n```"
+                formatted_content = f"```jsx:{path}\n{content}\n```"
             elif extension == '.css':
-                new_content = f"```css:{path}\n{content}\n```"
+                formatted_content = f"```css:{path}\n{content}\n```"
             elif extension == '.java':
-                new_content == f"```java:{path}\n{content}\n```"
+                formatted_content = f"```java:{path}\n{content}\n```"
             elif extension == '.hpp':
-                f"```hpp:{path}\n{content}\n```"
+                formatted_content = f"```hpp:{path}\n{content}\n```"
             elif extension == '.c':
-                f"```c:{path}\n{content}\n```"
+                formatted_content = f"```c:{path}\n{content}\n```"
             elif extension == '.yml':
-                new_content == f"```yml:{path}\n{content}\n```"
+                formatted_content = f"```yml:{path}\n{content}\n```"
             elif extension == '.xml':
-                new_content == f"```xml:{path}\n{content}\n```"
+                formatted_content = f"```xml:{path}\n{content}\n```"
             else:
-                new_content = f"The following document is located at {path}\n------\n{content}\n------"
-            writer.writerow([new_content])
+                formatted_content = f"The following document is located at {path}\n------\n{content}\n------"
+            writer.writerow([formatted_content])
+
+            
 
 if __name__ == "__main__":
     input_file = input("Enter the path of your text file: ")
-    final_output_csv = "wasmedge.csv"
+    output_file = input("Enter the path for output CSV file: ")
     parsed_data = parse_text_file(input_file)
-    transform_and_write_csv(parsed_data, final_output_csv)
-    print(f"Transformed CSV file '{final_output_csv}' generated successfully.")
+    transform_and_write_csv(parsed_data, output_file)
+    print(f"Transformed CSV file '{output_file}' generated successfully.")

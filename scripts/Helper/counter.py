@@ -1,24 +1,28 @@
 import pandas as pd
+import argparse
 
-# Read the CSV, forcing it into a single column by specifying an unusual separator
-df = pd.read_csv(r'C:\Users\91745\OneDrive\Desktop\Github_analyser\output\local_repo\final_repo\llamaedge_repopack.csv', sep='\n', header=None)
-
-# Rename the column to 'Content'
-df.columns = ['Content']
-
-# Define the word count function
 def count_words(text):
     if isinstance(text, str):
         return len(text.split())
     else:
         return 0
 
-# Apply the word count function and add the result as a new column
-df['Content_Word_Count'] = df['Content'].apply(count_words)
+def main():
+    parser = argparse.ArgumentParser(description='Count words in a CSV file')
+    parser.add_argument('input_path', help='Path to input CSV file')
+    parser.add_argument('output_path', help='Path to output CSV file')
+    
+    args = parser.parse_args()
 
-# Write to a new CSV without headers
-df.to_csv('wasmedge_quickjs.csv', index=False, header=False)
+    df = pd.read_csv(args.input_path, sep='\n', header=None)
+    df.columns = ['Content']
+   
+    df['Content_Word_Count'] = df['Content'].apply(count_words)
 
+    df.to_csv(args.output_path, index=False, header=False)
+
+if __name__ == '__main__':
+    main()
 
 
 
@@ -26,9 +30,9 @@ df.to_csv('wasmedge_quickjs.csv', index=False, header=False)
 import pandas as pd
 from transformers import AutoModel
 
-model = AutoModel.from_pretrained("Xenova/gpt-4")
+model = AutoModel.from_pretrained("Xenova/gpt-3.5")
 
-tokenizer = GPT2TokenizerFast.from_pretrained('Xenova/gpt-4')
+tokenizer = GPT2TokenizerFast.from_pretrained('Xenova/gpt-3.5')
 
 
 df = pd.read_csv('/home/aru/Desktop/Github_analyser/Output/summary/eth_md_summary.csv')

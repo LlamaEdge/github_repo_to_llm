@@ -1,12 +1,17 @@
 import csv
 import os
 import sys
-
+import argparse 
 csv.field_size_limit(10**9) 
 
-input_csv = r''
-output_csv = r''
+parser = argparse.ArgumentParser(description='Transform CSV content with formatting based on file extensions')
+parser.add_argument('input_csv', help='Path to input CSV file')
+parser.add_argument('output_csv', help='Path to output CSV file')
 
+args = parser.parse_args()
+
+input_csv = args.input_csv
+output_csv = args.output_csv
 with open(input_csv, mode='r', newline='', encoding='utf-8') as infile, \
      open(output_csv, mode='w', newline='', encoding='utf-8') as outfile:
     

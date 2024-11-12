@@ -51,7 +51,8 @@ def write_to_csv(data, output_file):
 
 if __name__ == "__main__":
     repo_url = input("Enter GitHub repository URL: ")
+    output_path = input("Enter output CSV file path: ")
     contents = get_github_contents(repo_url)
     paths = process_contents(contents)
-    write_to_csv(paths, "quickjs_all.csv")
-    print("CSV file 'quickjs_all.csv' generated successfully.")
+    write_to_csv(paths, output_path)
+    print(f"CSV file '{output_path}' generated successfully.")
