@@ -4,6 +4,9 @@ import os
 import sys
 import logging
 from typing import List, Dict
+import csv
+
+csv.field_size_limit(10**9)
 
 class ClaudeSummarizer:
     def __init__(self, api_key: str): 
@@ -103,7 +106,12 @@ def main():
         for row in csv_reader:
             main_content = row['Content']
 
+            if len(main_content) > 8000:
+                print(f"Skipping row {row_count + 1} due to content length exceeding 8000 characters.")
+                continue
+
             if main_content in processed_contents:
+                print(f"Skipping row {row_count + 1}: content has already been processed.")
                 continue
 
             try:
@@ -137,3 +145,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

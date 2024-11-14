@@ -36,13 +36,54 @@ def process_contents(contents, paths=[], parent_path=""):
             file_response = requests.get(item['download_url'], headers=headers)
             file_response.raise_for_status()
             file_content = file_response.text
-            paths.append({"Path": path, "Content": file_content})
+
+            extension = '.' + path.split('.')[-1] if '.' in path else ''
+
+            if extension == '.md':
+                formatted_content = f"The following is a markdown document located at {path}\n------\n{file_content}\n------"
+            elif extension == '.rs':
+                formatted_content = f"```rust:{path}\n{file_content}\n```"
+            elif extension == '.ts':
+                formatted_content = f"```typescript:{path}\n{file_content}\n```"
+            elif extension == '.tsx':
+                formatted_content = f"```typescript:{path}\n{file_content}\n```"
+            elif extension == '.sh':
+                formatted_content = f"```bash:{path}\n{file_content}\n```"
+            elif extension == '.py':
+                formatted_content = f"```python:{path}\n{file_content}\n```"
+            elif extension == '.js':
+                formatted_content = f"```javascript:{path}\n{file_content}\n```"
+            elif extension == '.json':
+                formatted_content = f"```json:{path}\n{file_content}\n```"
+            elif extension == '.txt':
+                formatted_content = f"The following is a plain text file located at {path}\n------\n{file_content}\n------"
+            elif extension == '.toml':
+                formatted_content = f"```toml:{path}\n{file_content}\n```"
+            elif extension == '.jsx':
+                formatted_content = f"```jsx:{path}\n{file_content}\n```"
+            elif extension == '.css':
+                formatted_content = f"```css:{path}\n{file_content}\n```"
+            elif extension == '.java':
+                formatted_content = f"```java:{path}\n{file_content}\n```"
+            elif extension == '.hpp':
+                formatted_content = f"```hpp:{path}\n{file_content}\n```"
+            elif extension == '.c':
+                formatted_content = f"```c:{path}\n{file_content}\n```"
+            elif extension == '.yml':
+                formatted_content = f"```yml:{path}\n{file_content}\n```"
+            elif extension == '.xml':
+                formatted_content = f"```xml:{path}\n{file_content}\n```"
+            elif extension == '.html':
+                formatted_content = f"```html:{path}\n{file_content}\n```"
+            else:
+                formatted_content = f"The following document is located at {path}\n------\n{file_content}\n------"
+            paths.append({"Content": formatted_content})
 
     return paths
 
 def write_to_csv(data, output_file):
     with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Path', 'Content']
+        fieldnames = ['Content']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()

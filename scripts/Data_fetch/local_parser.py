@@ -45,6 +45,8 @@ def process_local_repo(repo_path, paths=[]):
                 formatted_content = f"```xml:{relative_path}\n{file_content}\n```"
             elif extension == '.html':
                 formatted_content = f"```html:{relative_path}\n{file_content}\n```"
+            elif extension == '.tsx':
+                formatted_content = f"```typescript:{relative_path}\n{file_content}"
             else:
                 formatted_content = f"The following document is located at {relative_path}\n------\n{file_content}\n------"
             paths.append({"FormattedContent": formatted_content})
