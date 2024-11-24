@@ -99,11 +99,11 @@ def process_row(row, csv_writer, processed_contents, row_count):
         main_content = row[0]
 
         if main_content in processed_contents:
-            print(f"Skipping row {row_count + 1}: content has already been processed")
+            print(f"Skipping row as content has already been processed")
             return row_count, 0
 
-        if len(main_content) > 8000:
-            print(f"Skipping row {row_count + 1}: content exceeds 8000 characters")
+        if len(main_content) > 32000:
+            print(f"Skipping row {row_count + 1}: content exceeds 32000 characters")
             return row_count, 0
 
         summary = summarize(main_content)
@@ -179,4 +179,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-#till 118 done
