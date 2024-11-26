@@ -5,10 +5,11 @@ import sys
 import logging
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
 csv.field_size_limit(10**9)
 
-API_BASE_URL = "https://llama.us.gaianet.network/v1"
-MODEL_NAME = "llama"
+API_BASE_URL = "https://llama3b.gaia.domains/v1"
+MODEL_NAME = "llama3b"
 API_KEY = "GAIA"
 
 class ProcessingError(Exception):
@@ -98,6 +99,11 @@ def process_row(row, csv_writer, processed_contents, row_count):
         main_content = row[0]
 
         if main_content in processed_contents:
+            print(f"Skipping row because content has already been processed")
+            return row_count, 0
+
+        if len(main_content) > 32000:
+            print(f"Skipping row {row_count + 1}: content exceeds 32000 characters")
             return row_count, 0
 
         summary = summarize(main_content)
@@ -126,6 +132,16 @@ def process_row(row, csv_writer, processed_contents, row_count):
         print(f"Error processing row {row_count + 1}: {str(e)}")
         return row_count, 1
 
+
+def load_processed_contents(output_path):
+    processed = set()
+    if os.path.exists(output_path):
+        with open(output_path, 'r', newline='', encoding='utf-8') as outfile:
+            csv_reader = csv.reader(outfile)
+            for row in csv_reader:
+                processed.add(row[0])
+    return processed
+
 def main():
     if len(sys.argv) != 3:
         logging.error("Usage: python summarizer.py <input_csv> <output_csv>")
@@ -134,23 +150,31 @@ def main():
     input_path = sys.argv[1]
     output_path = sys.argv[2]
     
-    processed_contents = set()
+    processed_contents = load_processed_contents(output_path)
     row_count = 0
     skipped_rows = 0
 
-    with open(input_path, 'r', newline='', encoding='utf-8') as infile, \
-         open(output_path, 'a', newline='', encoding='utf-8') as outfile:
-        
-        csv_reader = csv.reader(infile)
-        csv_writer = csv.writer(outfile)
+    try:
+        with open(input_path, 'r', newline='', encoding='utf-8') as infile, \
+             open(output_path, 'a', newline='', encoding='utf-8') as outfile:
+            
+            csv_reader = csv.reader(infile)
+            csv_writer = csv.writer(outfile)
 
-        for row in csv_reader:
-            row_count, skipped = process_row(row, csv_writer, processed_contents, row_count)
-            skipped_rows += skipped
+            for row in csv_reader:
+                row_count, skipped = process_row(row, csv_writer, processed_contents, row_count)
+                skipped_rows += skipped
 
-    print(f"Modified data has been written to {output_path}")
-    print(f"Total rows successfully processed and summarized: {row_count}")
-    print(f"Total rows skipped: {skipped_rows}")
+                outfile.flush()
+
+    except KeyboardInterrupt:
+        print("Process interrupted by user. Progress saved.")
+    except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
+    finally:
+        print(f"Modified data has been written to {output_path}")
+        print(f"Total rows summarized: {row_count}")
+        print(f"Total rows skipped: {skipped_rows}")
 
 if __name__ == "__main__":
     main()

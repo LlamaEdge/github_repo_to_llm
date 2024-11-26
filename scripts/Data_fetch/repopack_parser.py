@@ -1,7 +1,9 @@
 import csv
 import os
 import sys
+
 csv.field_size_limit(10**9)
+
 def parse_text_file(input_file):
     data = []
     current_path = None
@@ -77,11 +79,13 @@ def transform_and_write_csv(data, output_csv):
                 formatted_content = f"The following document is located at {path}\n------\n{content}\n------"
             writer.writerow([formatted_content])
 
-            
-
 if __name__ == "__main__":
-    input_file = input("Enter the path of your text file: ")
-    output_file = input("Enter the path for output CSV file: ")
+    if len(sys.argv) != 3:
+        print("Usage: python script.py <input_text_file> <output_csv_file>")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
     parsed_data = parse_text_file(input_file)
     transform_and_write_csv(parsed_data, output_file)
     print(f"Transformed CSV file '{output_file}' generated successfully.")

@@ -59,8 +59,12 @@ def write_to_csv(data, output_file):
             writer.writerow([row['FormattedContent']])
 
 if __name__ == "__main__":
-    repo_path = input("Enter the local repository path: ")
-    output_path = input("Enter the output CSV file path: ")
+    if len(sys.argv) != 3:
+        print("Usage: python script.py <repo_url> <output_csv_path>")
+        sys.exit(1)
+
+    repo_path = sys.argv[1]
+    output_path = sys.argv[2]
     paths = process_local_repo(repo_path)
     write_to_csv(paths, output_path)
     print(f"CSV file '{output_path}' generated successfully.")
