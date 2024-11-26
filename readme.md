@@ -12,7 +12,7 @@ Follow the steps outlined below to use the scripts effectively.
 
 Before running the scripts, ensure the following tools and libraries are installed:  
 
-1. **Python**: Version 3.6 or above  
+1. **Python**: Version 3.10 or above  
 2. Required Python libraries: Install them using the `requirements.txt` file:
    ```bash
    pip install -r requirements.txt
