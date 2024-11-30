@@ -13,7 +13,7 @@ The `Github_parser.py` script is used to clone a GitHub repository and create a 
 
 ### Usage:
 ```bash
-python github_parser.py /path/to/local/repo output.csv --exclude folder1 folder2
+python github_parser.py <repo_path> <output_path> --exclude folder1 folder2
 ```
 
 ### Parameters:
@@ -29,7 +29,7 @@ The `Local_parser.py` script is used to process a local folder (directory) and c
 
 ### Usage:
 ```bash
-python python local_parser.py <repo_path> <output_path> --exclude folder1 folder2
+python local_parser.py /path/to/local/repo output.csv --exclude folder1 folder2
 ```
 
 ### Parameters:

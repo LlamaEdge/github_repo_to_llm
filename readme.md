@@ -27,22 +27,14 @@ Before running the scripts, ensure the following tools and libraries are install
    Extracts data from a GitHub repository and creates a CSV file.  
    - **How to Run**:
      ```bash
-     python github_parser.py <repo_url> <output_csv_path>
-     ```
-   - **Example**:
-     ```bash
-     python github_parser.py https://github.com/example/repo output.csv
+      python github_parser.py <repo_path> <output_path> --exclude folder1 folder2
      ```
 
 2. **Local Folder Parser** (`local_parser.py`)  
    Extracts data from a local folder and creates a CSV file.  
    - **How to Run**:
      ```bash
-     python local_parser.py <folder_path> <output_csv_path>
-     ```
-   - **Example**:
-     ```bash
-     python local_parser.py ./example_folder output.csv
+     python local_parser.py /path/to/local/repo output.csv --exclude folder1 folder2
      ```
 
 3. **Repopack Parser** (`repopack_parser.py`)  
@@ -51,10 +43,6 @@ Before running the scripts, ensure the following tools and libraries are install
      ```bash
      python repopack_parser.py <input_text_file> <output_csv_file>
      ```
-   - **Example**:
-     ```bash
-     python repopack_parser.py input.txt output.csv
-     ```  
 
 ### **Summarizer and Q&A Generator Scripts**  
 
@@ -63,10 +51,6 @@ Before running the scripts, ensure the following tools and libraries are install
    - **How to Run**:
      ```bash
      python summarizer.py <input_csv> <output_csv>
-     ```
-   - **Example**:
-     ```bash
-     python summarizer.py data.csv summarized_output.csv
      ```
    - **Output**:  
      - A CSV file with the original content, generated summaries, and Q&A pairs.  
@@ -121,7 +105,7 @@ To keep the process automated, you can set up a cron job for periodic execution 
 - The repository is structured to support additional scripts for parsing or summarizing different formats.  
 - Once the database is created using these scripts, it can be utilized to generate a knowledge base that helps address issues related to a specific repository. For more information, refer to [this resource](https://github.com/staru09/Gradio_bot).
 - Knowledge bases for certain repositories, along with the final CSV files containing summaries and Q&A pairs, can be accessed [here](https://docs.google.com/spreadsheets/d/1_hRiQkVr9Dl2BLyjY87XjfReXUow0c9vKNA4nw_s34g/edit?usp=sharing).
-- An example of creating a knowledge base for Gradio can be found [here](https://github.com/staru09/Github_analyser/gradio_bot)
+- An example of creating a knowledge base for Gradio can be found [here](https://github.com/staru09/Gradio_bot)
 ---  
 
 ## Additional Resources  
