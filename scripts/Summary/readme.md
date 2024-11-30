@@ -71,7 +71,7 @@ python summarizer_claude.py <input_csv> <output_csv>
 ## Common Notes
 
 1. **Requirements**:
-   - Python 3.7 or above.
+   - Python 3.10 or above.
    - Required Python libraries:
      - `openai`, `csv`, `tenacity`, `os`, `sys`, `logging`, `time`.
 
