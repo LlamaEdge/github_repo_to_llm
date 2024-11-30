@@ -6,7 +6,7 @@ import logging
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from openai import OpenAI
-client = OpenAI(api_key='sk-')
+client = OpenAI(api_key='sk-proj') # Replace with your actual API key
 MODEL_NAME = "gpt-4o"
 
 class ProcessingError(Exception):

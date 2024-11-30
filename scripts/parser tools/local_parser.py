@@ -1,11 +1,14 @@
 import os
 import csv
-import sys
+import argparse
 
 csv.field_size_limit(10**9)
 
-def process_local_repo(repo_path, paths=[]):
+def process_local_repo(repo_path, exclude_folders=[], paths=[]):
     for root, dirs, files in os.walk(repo_path):
+        # Skip excluded folders
+        dirs[:] = [d for d in dirs if d not in exclude_folders]
+        
         for file in files:
             file_path = os.path.join(root, file)
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -46,7 +49,7 @@ def process_local_repo(repo_path, paths=[]):
             elif extension == '.html':
                 formatted_content = f"```html:{relative_path}\n{file_content}\n```"
             elif extension == '.tsx':
-                formatted_content = f"```typescript:{relative_path}\n{file_content}"
+                formatted_content = f"```typescript:{relative_path}\n{file_content}\n```"
             else:
                 formatted_content = f"The following document is located at {relative_path}\n------\n{file_content}\n------"
             paths.append({"FormattedContent": formatted_content})
@@ -59,12 +62,15 @@ def write_to_csv(data, output_file):
             writer.writerow([row['FormattedContent']])
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python script.py <repo_url> <output_csv_path>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Process a local repository and write formatted file contents to a CSV.")
+    parser.add_argument("repo_path", help="Path to the local repository.")
+    parser.add_argument("output_path", help="Path to the output CSV file.")
+    parser.add_argument("--exclude", nargs='*', default=[], help="List of folder names to exclude.")
 
-    repo_path = sys.argv[1]
-    output_path = sys.argv[2]
-    paths = process_local_repo(repo_path)
-    write_to_csv(paths, output_path)
-    print(f"CSV file '{output_path}' generated successfully.")
+    args = parser.parse_args()
+
+    exclude_folders = [folder.lower() for folder in args.exclude]
+
+    paths = process_local_repo(args.repo_path, exclude_folders=exclude_folders)
+    write_to_csv(paths, args.output_path)
+    print(f"CSV file '{args.output_path}' generated successfully.")

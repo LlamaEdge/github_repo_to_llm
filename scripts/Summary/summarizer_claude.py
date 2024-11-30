@@ -82,7 +82,7 @@ def main():
     input_path = sys.argv[1]
     output_path = sys.argv[2]
     
-    api_key = "sk-"  # Replace with your actual API key
+    api_key = "sk-ant-"  # Replace with your actual API key
     summarizer = ClaudeSummarizer(api_key)
     
     processed_contents = set()
