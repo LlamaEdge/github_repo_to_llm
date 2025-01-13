@@ -4,4 +4,6 @@ upload.py
 issue_tracker.py
 cronjob_parser.py
 Extra
-*.sh
+automate.sh
+docker_init.sh
+example.ipynb
