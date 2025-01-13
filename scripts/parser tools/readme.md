@@ -9,17 +9,17 @@ This folder contains three Python scripts designed to parse different types of i
 ## 1. **Github_parser.py**
 
 ### Description:
-The `Github_parser.py` script is used to clone a GitHub repository and create a CSV file containing the formatted contents of all files within the repository. It formats each file's content based on its file type for easier analysis and readability.
+The `Github_parser.py` script is used to clone a GitHub repository and create a CSV file containing the formatted contents of all files within the repository. It formats each file's content based on its file type for easier analysis and readability. The ```--exclude``` flag can be used to skip any specific folder from the repository. 
 
 ### Usage:
 ```bash
-python github_parser.py <repo_url> <output_csv_path>
+python github_parser.py <repo_path> <output_path> --exclude folder1 folder2
 ```
 
 ### Parameters:
 - `<repo_url>`: The URL of the GitHub repository to be cloned and parsed.
 - `<output_csv_path>`: The path where the generated CSV file will be saved.
-
+- ```--exclude``` *Optional:* Folders to be excluded
 ---
 
 ## 2. **Local_parser.py**
@@ -29,12 +29,13 @@ The `Local_parser.py` script is used to process a local folder (directory) and c
 
 ### Usage:
 ```bash
-python local_parser.py <local_path> <output_csv_path>
+python local_parser.py /path/to/local/repo output.csv --exclude folder1 folder2
 ```
 
 ### Parameters:
 - `<local_path>`: The path to the local folder to be parsed.
 - `<output_csv_path>`: The path where the generated CSV file will be saved.
+- ```--exclude``` *Optional:* Folders to be excluded
 
 ---
 
